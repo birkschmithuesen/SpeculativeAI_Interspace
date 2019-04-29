@@ -9,6 +9,9 @@ Find a documentation about this work on: https://vimeo.com/280350114
 The training data can be downloaded here:
 www.birkschmithuesen.com/SAI/traingsdata.txt
 
+A trained model is here:
+www.birkschmithuesen.com/SAI/model.h5
+
 The program predicts the output for the lightobject in real time from received FFT data.
 The communication is done via OSC.<br>
 WARNING: if you have no network card with the fixed IP 2.0.0.1 in your computer, the program will crash. <br>
