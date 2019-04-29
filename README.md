@@ -6,10 +6,10 @@ The program generates a model of feed-forward NN with 30 inputs and 13824 output
 
 Find a documentation about this work on: https://vimeo.com/280350114
 
-The training data can be downloaded here:
+The training data can be downloaded here and opened with liveTraining.py:
 www.birkschmithuesen.com/SAI/traingsdata.txt
 
-A trained model is here:
+A trained model is here and opened with loadModel.py:
 www.birkschmithuesen.com/SAI/model.h5
 
 The program predicts the output for the lightobject in real time from received FFT data.
