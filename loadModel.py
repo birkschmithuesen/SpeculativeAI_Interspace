@@ -25,8 +25,9 @@ import numpy as np
 import os
 from numpy import loadtxt
 
-UDP_IP = '2.0.0.2'
+UDP_IP = '127.0.0.1'
 UDP_PORT=10005
+SAMPLE_RATE = 30 #samples per second
 
 model = Sequential()
 
@@ -110,6 +111,7 @@ def ledoutput():
           header=struct.pack('!IBB',frameCount,x,0)
           message=header+bytes(ledValues.tolist())
           sock.sendto(message, (UDP_IP, UDP_PORT))
+          #print(sock)
         #wait till the next frame package is ready
         if(len(dout) < 1):
             e2.wait()

@@ -1,4 +1,4 @@
-# SpeculativeArtificialIntelligence / Exp. #1 
+# SpeculativeArtificialIntelligence / Exp. #1
 # (audiovisual associations)
 The program generates a model of feed-forward NN with 30 inputs and 13824 outputs.<br>
 30 inputs: FFT analyses of sounds<br>
@@ -18,10 +18,15 @@ WARNING: if you have no network card with the fixed IP 2.0.0.1 in your computer,
 Also see: line 153 and line 102
 
 # communication diagram:
-Ableton Live(sound program)/FFT analysis => 30 float values via OSC (NN input) => python/neural network => 13824 float values via OSC (NN output) => JAVA(visualizer on screen and light object) 
+Ableton Live(sound program)/FFT analysis => 30 float values via OSC (NN input) => python/neural network => 13824 float values via OSC (NN output) => JAVA(visualizer on screen and light object)
 
 ## packages/files needed
 TensorFlow (pip tensorflow)
 Keras (pip keras)
 PythonOsc (pip python-osc)
 www.birkschmithuesen.com/SAI/traingsdata.txt
+
+# installation
+
+  brew install portaudio
+  pip3 install -r requirements.txt
