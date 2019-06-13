@@ -13,6 +13,7 @@ RATE = 44100
 CHUNK = 2**13
 START = 0
 N = 2**13
+WINDOW = np.hanning(N)
 BINS = [(0, 49), (50, 199), (200, 499), (500, 1999),
         (2000, 9999), (10000, 14999), (15000, 20000)]
 LOCK = Semaphore(0)
@@ -86,8 +87,11 @@ class SpectrumAnalyzer:
         self.wave_x = range(START, START + N)
         self.wave_y = self.data[START:START + N]
         self.spec_x = np.fft.rfftfreq(N, d=1.0/RATE)
-        spec_y_raw = np.fft.rfft(self.data[START:START + N])
+        windowed_signal = self.data[START:START + N] * WINDOW
+        spec_y_raw = np.fft.rfft(windowed_signal)
         self.spec_y = [np.sqrt(c.real ** 2 + c.imag ** 2) for c in spec_y_raw]
+        spec_y_raw2 = np.fft.rfft(self.data[START:START + N])
+        self.spec_y2 = [np.sqrt(c.real ** 2 + c.imag ** 2) for c in spec_y_raw2]
 
     def binned_fft(self):
         """
@@ -134,10 +138,13 @@ class SpectrumAnalyzer:
         plt.ylabel("amplitude")
         #Spectrum
         plt.subplot(312)
-        plt.plot(self.spec_x, self.spec_y, marker='o', linestyle='-')
+        raw, = plt.plot(self.spec_x, self.spec_y2, marker='o', linestyle='-', label='raw')
         plt.axis([0, RATE / 2, 0, 50])
         plt.xlabel("frequency [Hz]")
         plt.ylabel("amplitude spectrum")
+        plt.subplot(312)
+        windowed, = plt.plot(self.spec_x, self.spec_y, marker='o', linestyle='-', label='windowed')
+        plt.legend(handles=[raw, windowed])
         #Bins
         if self.binned:
             plt.subplot(313)
@@ -149,4 +156,4 @@ class SpectrumAnalyzer:
         plt.pause(.02)
 
 if __name__ == "__main__":
-    SPEC = SpectrumAnalyzer(binned=True)
+    SPEC = SpectrumAnalyzer(binned=False)

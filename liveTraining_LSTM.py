@@ -6,10 +6,10 @@ The computation process is structured as followed:
 1. when receiving the the OSC command "/train" the function train_handler executes model.fit
 2. input: receive audio
 3. FFT analyses: seperate continues audio stream into 30 frequency band values with a frequency of 30fps
-4. prediction: convert the FFT analyses results to feed into a neural network. 
+4. prediction: convert the FFT analyses results to feed into a neural network.
     Predict predict the brightness values of the 13824 Leds of the Interspace object
 """
-    
+
 import keras
 from keras.models import Sequential
 from keras.utils import plot_model
@@ -33,7 +33,7 @@ import os
 from numpy import loadtxt
 
 #the ip and port to send the LED data to. The program Ortlicht receives them via OSC and converts them to ArtNet
-UDP_IP = 'localhost' 
+UDP_IP = 'localhost'
 UDP_PORT=10005
 
 model = Sequential()
@@ -43,7 +43,7 @@ NUM_SOUNDS = 60  # 2 seconds and 30 sounds per second?
 LSTM_OUT = 512
 
 HIDDEN1_DIM = 1024
-OUTPUT_DIM = 13000
+OUTPUT_DIM = 13824
 # input shape is (?, NUM_SOUNDS, INPUT_DIM): ? is the batch size, NUM_SOUNDS is the number of sounds in the
 #                                            sequence and INPUT_DIM is the vector size of each sound
 # output_shape is (?, LSTM_OUT): ? is the batch size and LSTM_OUT is the number of units in the output
@@ -85,7 +85,7 @@ def newModel_handler(unused_addr, args):
     model.add(Dense(13824, activation='sigmoid',kernel_initializer=my_init, bias_initializer=my_init))
     sgd = SGD(lr=0.06, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
-    model.fit(train_X, train_y, epochs=1, batch_size=32, shuffle=True)
+    model.fit(training_input, training_output, epochs=1, batch_size=32, shuffle=True)
     model._make_predict_function()
     print('Loaded new model')
 
@@ -93,7 +93,7 @@ def train_handler(unused_addr, args):
     """
     neural network trainer
     """
-    model.fit(train_X, train_y, epochs=13, batch_size=32, shuffle=True)
+    model.fit(training_input, training_output, epochs=13, batch_size=32, shuffle=True)
     model._make_predict_function()
     print('training finished...')
     print('')
@@ -153,9 +153,27 @@ values=loadtxt(file_name, dtype='float32')
 print('Trainingsdata points: ',values.shape[0])
 print()
 
-#split into input and outputs
-train_X, train_y = values[:,:-13824], values[:,30:]
-print('Train_X: ', train_X.shape, 'Train_y: ', train_y.shape)
+batch_size = (len(values)+1)/NUM_SOUNDS
+batch_size = int(batch_size)
+print("Batch size:" + str(batch_size))
+training_input = np.empty([batch_size, NUM_SOUNDS, INPUT_DIM])
+training_output = np.empty([batch_size, OUTPUT_DIM])
+
+input_batch = np.empty([NUM_SOUNDS, INPUT_DIM])
+output_batch = np.empty([OUTPUT_DIM])
+batch_counter = 0
+# split up input rows into batches and seperate input and outputs in the values array
+for counter, row in enumerate(values):
+    if counter % NUM_SOUNDS is 0 and counter > 0:
+        training_input[batch_counter], training_output[batch_counter] = input_batch.copy(), output_batch.copy()
+        batch_counter += 1
+    print(values[counter,:-13824].shape)
+    print(input_batch.shape)
+    input_batch[counter % NUM_SOUNDS] = values[counter,:-13824]
+    output_batch = values[counter,INPUT_DIM:]
+
+
+print('training_input: ', training_input.shape, 'training_output: ', training_output.shape)
 
 """
 Initialize NeuralNetwork with LSTM.
@@ -178,7 +196,7 @@ adam = keras.optimizers.Adam(lr=0.0001)
 model.compile(loss='binary_crossentropy', optimizer=adam)
 
 model.summary()
-model.fit(train_X, train_y, epochs=1, batch_size=32, shuffle=True)
+model.fit(training_input, training_output, epochs=1, batch_size=32, shuffle=True)
 model._make_predict_function()
 print('Loaded new model')
 
