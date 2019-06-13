@@ -38,6 +38,18 @@ UDP_PORT=10005
 
 model = Sequential()
 
+INPUT_DIM = 30
+NUM_SOUNDS = 60  # 2 seconds and 30 sounds per second?
+LSTM_OUT = 512
+
+HIDDEN1_DIM = 1024
+OUTPUT_DIM = 13000
+# input shape is (?, NUM_SOUNDS, INPUT_DIM): ? is the batch size, NUM_SOUNDS is the number of sounds in the
+#                                            sequence and INPUT_DIM is the vector size of each sound
+# output_shape is (?, LSTM_OUT): ? is the batch size and LSTM_OUT is the number of units in the output
+# 'return_sequences' is False because you want only to codify NUM_SOUNDS sounds in one LSTM_OUT-dimensional vector
+
+
 fft=[]
 
 e1 = threading.Event()
@@ -145,12 +157,27 @@ print()
 train_X, train_y = values[:,:-13824], values[:,30:]
 print('Train_X: ', train_X.shape, 'Train_y: ', train_y.shape)
 
-# LOAD NN MODEL
-my_init=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
-model.add(Dense(6144, activation='sigmoid', input_dim=30, kernel_initializer=my_init, bias_initializer=my_init))
-model.add(Dense(13824, activation='sigmoid',kernel_initializer=my_init, bias_initializer=my_init))
-sgd = SGD(lr=0.06, decay=1e-6, momentum=0.9, nesterov=True)
-model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
+"""
+Initialize NeuralNetwork with LSTM.
+ToDo: Make the input vector dimensions fit the LSTM (NUM_SOUNDS!)
+"""
+model.add(keras.layers.LSTM(units=LSTM_OUT, input_shape=(NUM_SOUNDS, INPUT_DIM),
+                            return_sequences=False, name='lstm_layer'))
+
+# This is a hidden layer. You can use it or not.
+# In this case the activation can be ReLU. I write down 2048 output units but you can try other quantities
+model.add(keras.layers.Dense(units=HIDDEN1_DIM, activation='relu', name='hidden1_layer'))
+
+# the output layer must have 13000 units (one per led) and the activation has to be sigmoid
+model.add(keras.layers.Dense(units=OUTPUT_DIM, activation='sigmoid', name='output_layer'))
+
+# define the optimizer. You can use the optimizer that you want
+adam = keras.optimizers.Adam(lr=0.0001)
+
+# and finally use binary_crossentropy as loos function
+model.compile(loss='binary_crossentropy', optimizer=adam)
+
+model.summary()
 model.fit(train_X, train_y, epochs=1, batch_size=32, shuffle=True)
 model._make_predict_function()
 print('Loaded new model')
