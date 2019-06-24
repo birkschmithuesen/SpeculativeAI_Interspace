@@ -43,6 +43,8 @@ model = Sequential()
 INPUT_DIM = 30
 NUM_SOUNDS = 60  # 2 seconds and 30 sounds per second?
 LSTM_OUT = 512
+BATCH_SIZE = 32
+EPOCHS = 32
 
 HIDDEN1_DIM = 1024
 OUTPUT_DIM = 13824
@@ -100,7 +102,7 @@ def train_handler(unused_addr, args):
     """
     neural network trainer
     """
-    model.fit(training_input, training_output, epochs=13, batch_size=32, shuffle=True)
+    model.fit(training_input, training_output, epochs=EPOCHS, batch_size=BATCH_SIZE, shuffle=True)
     model._make_predict_function()
     print('training finished...')
     print('')
@@ -184,24 +186,28 @@ print('training_input shape: ', training_input.shape, 'training_output shape: ',
 Initialize NeuralNetwork with LSTM.
 ToDo: Make the input vector dimensions fit the LSTM (NUM_SOUNDS!)
 """
+my_init=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
+
 model.add(keras.layers.LSTM(units=LSTM_OUT, input_shape=(NUM_SOUNDS, INPUT_DIM),
                             return_sequences=False, name='lstm_layer'))
 
 # This is a hidden layer. You can use it or not.
 # In this case the activation can be ReLU. I write down 2048 output units but you can try other quantities
-model.add(keras.layers.Dense(units=HIDDEN1_DIM, activation='relu', name='hidden1_layer'))
+model.add(keras.layers.Dense(units=HIDDEN1_DIM, activation='relu', name='hidden1_layer', kernel_initializer=my_init, bias_initializer=my_init))
 
 # the output layer must have 13000 units (one per led) and the activation has to be sigmoid
-model.add(keras.layers.Dense(units=OUTPUT_DIM, activation='sigmoid', name='output_layer'))
+model.add(keras.layers.Dense(units=OUTPUT_DIM, activation='sigmoid', name='output_layer', kernel_initializer=my_init, bias_initializer=my_init))
 
 # define the optimizer. You can use the optimizer that you want
 adam = keras.optimizers.Adam(lr=0.0001)
 
 # and finally use binary_crossentropy as loos function
-model.compile(loss='binary_crossentropy', optimizer=adam)
+# model.compile(loss='binary_crossentropy', optimizer=adam)
+sgd = SGD(lr=0.06, decay=1e-6, momentum=0.9, nesterov=True)
+model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
 model.summary()
-model.fit(training_input, training_output, epochs=1, batch_size=32, shuffle=True)
+model.fit(training_input, training_output, epochs=1, batch_size=BATCH_SIZE, shuffle=True)
 model._make_predict_function()
 print('Loaded new model')
 
