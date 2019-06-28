@@ -8,11 +8,17 @@ import pyaudio
 import matplotlib.pyplot as plt
 import time
 import sys
+from pythonosc import osc_message_builder
+from pythonosc import udp_client
 
 DEBUG = True
 SHOW_GRAPH = True
-FORMAT = pyaudio.paFloat32
 FPS = 30
+
+OSC_IP = "127.0.0.1"
+OSC_PORT = 8001
+
+FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 44100
 CHUNK = 2**10
@@ -42,7 +48,7 @@ class SpectrumAnalyzer:
     This class contains a spectrum analyzer that optionally plots the results
     """
 
-    def __init__(self, binned=False):
+    def __init__(self, binned=False, send_osc=True):
         self.pyaudio = pyaudio.PyAudio()
         self.stream = self.pyaudio.open(format=FORMAT,
                                         channels=CHANNELS,
@@ -61,6 +67,8 @@ class SpectrumAnalyzer:
         self.data = []
         self.last_frame_timestamp = time.time()
         self.frame_time_interval = 1.0/FPS
+        if send_osc:
+            self.client = udp_client.SimpleUDPClient(OSC_IP, OSC_PORT)
         # Main loop
         plt.ion()
         self.loop()
@@ -81,8 +89,15 @@ class SpectrumAnalyzer:
                 self.binned_fft()
             else:
                 self.fft()
+            self.send_fft_osc()
 
         return (None, pyaudio.paContinue)
+
+    def send_fft_osc(self):
+        """
+        send the computed fft results via OSC to the set IP and port
+        """
+        self.client.send_message("/fft_train", list(self.fft_bins_y))
 
     def loop(self):
         """
@@ -159,14 +174,15 @@ class SpectrumAnalyzer:
         plt.ylabel("amplitude")
         # spectrum
         plt.subplot(312)
-        plt.axis([0, RATE / 2, 0, 50])
+        axes = plt.gca()
+        axes.set_ylim([0,50])
         plt.xlabel("frequency [Hz]")
         plt.ylabel("amplitude spectrum")
         if self.binned:
-            plt.plot(self.spec_x, self.fft_bins_y, marker='o', linestyle='-')
+            plt.plot(self.fft_bins_x, self.fft_bins_y, marker='o', linestyle='-')
         else:
             plt.plot(self.spec_x, self.spec_y, marker='o', linestyle='-')
-        plt.pause(.001)
+        plt.pause(.01)
 
 if __name__ == "__main__":
-    SPEC = SpectrumAnalyzer(binned=False)
+    SPEC = SpectrumAnalyzer(binned=True)
