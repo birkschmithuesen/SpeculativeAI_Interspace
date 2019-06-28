@@ -13,7 +13,7 @@ from pythonosc import udp_client
 
 DEBUG = True
 SHOW_GRAPH = True
-FPS = 30
+FPS = 40
 
 OSC_IP = "127.0.0.1"
 OSC_PORT = 8001
@@ -111,6 +111,7 @@ class SpectrumAnalyzer:
                 self.graphplot()
         except KeyboardInterrupt:
             self.stream.close()
+            plt.close('all')
             print("\nEnd...")
             sys.exit(0)
 
@@ -182,7 +183,9 @@ class SpectrumAnalyzer:
             plt.plot(self.fft_bins_x, self.fft_bins_y, marker='o', linestyle='-')
         else:
             plt.plot(self.spec_x, self.spec_y, marker='o', linestyle='-')
-        plt.pause(.01)
+        plt.pause(.02)
 
 if __name__ == "__main__":
     SPEC = SpectrumAnalyzer(lambda x: x, binned=True, send_osc=True)
+    while True:
+        SPEC.tick()
