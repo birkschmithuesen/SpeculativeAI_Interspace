@@ -6,17 +6,25 @@ from threading import Semaphore
 import numpy as np
 import pyaudio
 import matplotlib.pyplot as plt
+import time
+import sys
 
+DEBUG = True
+SHOW_GRAPH = True
 FORMAT = pyaudio.paFloat32
+FPS = 30
 CHANNELS = 1
 RATE = 44100
-CHUNK = 2**13
+CHUNK = 2**10
 START = 0
-N = 2**13
+N = 2**10
 WINDOW = np.hanning(N)
-BINS = [(0, 49), (50, 199), (200, 499), (500, 1999),
-        (2000, 9999), (10000, 14999), (15000, 20000)]
+BINS = [(a, a+665) for a in range(0, 19980, 666)]
 LOCK = Semaphore(0)
+
+def debug(str):
+    if DEBUG:
+        print(str)
 
 def closest_value_index(val, lst):
     """
@@ -34,12 +42,6 @@ class SpectrumAnalyzer:
     This class contains a spectrum analyzer that optionally plots the results
     """
 
-    wave_x = 0
-    wave_y = 0
-    spec_x = 0
-    spec_y = 0
-    data = []
-
     def __init__(self, binned=False):
         self.pyaudio = pyaudio.PyAudio()
         self.stream = self.pyaudio.open(format=FORMAT,
@@ -52,6 +54,13 @@ class SpectrumAnalyzer:
         self.binned = binned
         self.fft_bins_x = [str(x) for x in BINS]
         self.fft_bins_y = np.arange(len(BINS))
+        self.wave_x = 0
+        self.wave_y = 0
+        self.spec_x = 0
+        self.spec_y = 0
+        self.data = []
+        self.last_frame_timestamp = time.time()
+        self.frame_time_interval = 1.0/FPS
         # Main loop
         plt.ion()
         self.loop()
@@ -60,12 +69,19 @@ class SpectrumAnalyzer:
         """
         callback function for PyAudio stream
         """
-        LOCK.release()
-        self.data = np.frombuffer(in_data, dtype=np.float32)
-        if self.binned:
-            self.binned_fft()
-        else:
-            self.fft()
+        if self.time_for_next_frame():
+            LOCK.release()
+            time_delta = time.time() - self.last_frame_timestamp
+            fps = 1.0 / time_delta
+            self.last_frame_timestamp = time.time()
+            sys.stdout.write("\r{} FPS".format(int(fps)))
+            sys.stdout.flush()
+            self.data = np.frombuffer(in_data, dtype=np.float32)
+            if self.binned:
+                self.binned_fft()
+            else:
+                self.fft()
+
         return (None, pyaudio.paContinue)
 
     def loop(self):
@@ -74,24 +90,26 @@ class SpectrumAnalyzer:
         """
         try:
             while True:
-                self.graphplot()
+                if SHOW_GRAPH:
+                    self.graphplot()
+                else:
+                    continue
         except KeyboardInterrupt:
             self.stream.close()
 
-        print("End...")
+        debug("End...")
 
     def fft(self):
         """
         apply fft to audio in current buffer
         """
+        fft_start_time = time.time()
         self.wave_x = range(START, START + N)
         self.wave_y = self.data[START:START + N]
         self.spec_x = np.fft.rfftfreq(N, d=1.0/RATE)
         windowed_signal = self.data[START:START + N] * WINDOW
         spec_y_raw = np.fft.rfft(windowed_signal)
         self.spec_y = [np.sqrt(c.real ** 2 + c.imag ** 2) for c in spec_y_raw]
-        spec_y_raw2 = np.fft.rfft(self.data[START:START + N])
-        self.spec_y2 = [np.sqrt(c.real ** 2 + c.imag ** 2) for c in spec_y_raw2]
 
     def binned_fft(self):
         """
@@ -124,6 +142,9 @@ class SpectrumAnalyzer:
         average = bin_sum / (i+1)
         return average
 
+    def time_for_next_frame(self):
+        return time.time() > self.last_frame_timestamp + self.frame_time_interval
+
     def graphplot(self):
         """
         draw graph of audio and fft data
@@ -136,24 +157,16 @@ class SpectrumAnalyzer:
         plt.axis([START, START + N, -0.5, 0.5])
         plt.xlabel("time [sample]")
         plt.ylabel("amplitude")
-        #Spectrum
+        # spectrum
         plt.subplot(312)
-        raw, = plt.plot(self.spec_x, self.spec_y2, marker='o', linestyle='-', label='raw')
         plt.axis([0, RATE / 2, 0, 50])
         plt.xlabel("frequency [Hz]")
         plt.ylabel("amplitude spectrum")
-        plt.subplot(312)
-        windowed, = plt.plot(self.spec_x, self.spec_y, marker='o', linestyle='-', label='windowed')
-        plt.legend(handles=[raw, windowed])
-        #Bins
         if self.binned:
-            plt.subplot(313)
-            plt.plot(self.fft_bins_x, self.fft_bins_y, marker='o', linestyle='-')
-            #plt.axis([0, RATE / 2, 0, 50])
-            plt.xlabel("frequency [Hz]")
-            plt.ylabel("amplitude spectrum")
-        #Pause
-        plt.pause(.02)
+            plt.plot(self.spec_x, self.fft_bins_y, marker='o', linestyle='-')
+        else:
+            plt.plot(self.spec_x, self.spec_y, marker='o', linestyle='-')
+        plt.pause(.001)
 
 if __name__ == "__main__":
     SPEC = SpectrumAnalyzer(binned=False)

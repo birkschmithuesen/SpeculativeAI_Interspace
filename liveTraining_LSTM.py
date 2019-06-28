@@ -169,7 +169,7 @@ training_input = np.empty([batch_size, NUM_SOUNDS, INPUT_DIM])
 training_output = np.empty([batch_size, OUTPUT_DIM])
 
 input_batch = np.empty([NUM_SOUNDS, INPUT_DIM])
-output_batch = np.empty([OUTPUT_DIM])
+output_batch = np.empty([NUM_SOUNDS, OUTPUT_DIM])
 batch_counter = 0
 # split up input rows into batches and seperate input and outputs in the values array
 for counter, row in enumerate(values):
