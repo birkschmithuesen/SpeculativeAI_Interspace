@@ -26,7 +26,7 @@ START = 0
 N = 2**10
 WINDOW = np.hanning(N)
 BINS = [(a, a+665) for a in range(0, 19980, 666)]
-LOCK = Semaphore(0)
+SEMAPHORE_GRAPH_SYNC = Semaphore(0)
 
 def debug(str):
     if DEBUG:
@@ -48,7 +48,8 @@ class SpectrumAnalyzer:
     This class contains a spectrum analyzer that optionally plots the results
     """
 
-    def __init__(self, binned=False, send_osc=True):
+    def __init__(self, fft_function, binned=True, send_osc=True):
+        self.fft_callback = fft_function
         self.pyaudio = pyaudio.PyAudio()
         self.stream = self.pyaudio.open(format=FORMAT,
                                         channels=CHANNELS,
@@ -67,18 +68,18 @@ class SpectrumAnalyzer:
         self.data = []
         self.last_frame_timestamp = time.time()
         self.frame_time_interval = 1.0/FPS
-        if send_osc:
+        self.send_osc = send_osc
+        if self.send_osc:
             self.client = udp_client.SimpleUDPClient(OSC_IP, OSC_PORT)
         # Main loop
         plt.ion()
-        self.loop()
 
     def stream_callback(self, in_data, frame_count, time_info, status_flags):
         """
         callback function for PyAudio stream
         """
         if self.time_for_next_frame():
-            LOCK.release()
+            SEMAPHORE_GRAPH_SYNC.release()
             time_delta = time.time() - self.last_frame_timestamp
             fps = 1.0 / time_delta
             self.last_frame_timestamp = time.time()
@@ -87,10 +88,12 @@ class SpectrumAnalyzer:
             self.data = np.frombuffer(in_data, dtype=np.float32)
             if self.binned:
                 self.binned_fft()
+                self.fft_callback(self.fft_bins_y)
             else:
                 self.fft()
-            self.send_fft_osc()
-
+                self.fft_callback(self.spec_y)
+            if self.send_osc:
+                self.send_fft_osc()
         return (None, pyaudio.paContinue)
 
     def send_fft_osc(self):
@@ -99,20 +102,17 @@ class SpectrumAnalyzer:
         """
         self.client.send_message("/fft_train", list(self.fft_bins_y))
 
-    def loop(self):
+    def tick(self):
         """
         runs loop that plots fft audio results
         """
         try:
-            while True:
-                if SHOW_GRAPH:
-                    self.graphplot()
-                else:
-                    continue
+            if SHOW_GRAPH:
+                self.graphplot()
         except KeyboardInterrupt:
             self.stream.close()
-
-        debug("End...")
+            print("\nEnd...")
+            sys.exit(0)
 
     def fft(self):
         """
@@ -164,7 +164,7 @@ class SpectrumAnalyzer:
         """
         draw graph of audio and fft data
         """
-        LOCK.acquire()
+        SEMAPHORE_GRAPH_SYNC.acquire()
         plt.clf()
         # wave
         plt.subplot(311)
@@ -185,4 +185,4 @@ class SpectrumAnalyzer:
         plt.pause(.01)
 
 if __name__ == "__main__":
-    SPEC = SpectrumAnalyzer(binned=True)
+    SPEC = SpectrumAnalyzer(lambda x: x, binned=True, send_osc=True)

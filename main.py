@@ -32,11 +32,14 @@ from multiprocessing import Process, Queue
 import numpy as np
 import os
 from numpy import loadtxt
+from fft import SpectrumAnalyzer
 
 # the ip and port to send the LED data to. The program Ortlicht receives them via OSC and
 # converts them to ArtNet
-UDP_IP = 'localhost'
+UDP_IP = '127.0.0.1'
 UDP_PORT = 10005
+OSC_LISTEN_IP = "127.0.0.1"
+OSC_LISTEN_PORT = 8000
 
 model = Sequential()
 
@@ -58,18 +61,15 @@ OUTPUT_DIM = 13824
 
 
 fft=[]
-
-e1 = threading.Event()
+e1 = threading.Semaphore(0)
 e2 = threading.Event()
 
-def fft_handler(*args):
+def fft_callback_function(fft_data):
     """
     this function is called when fft values are received via OSC (from ableton Live)
     """
-    print('received ftt paket. list-length: ', len(fft), '   first arg: ', args[1])
-    for arg in args[1:]:
-        fft.append(arg)
-    e1.set()
+    fft.append(list(fft_data))
+    e1.release()
 
 frameCount = 0
 def frameCountHandler(unused_addr, args):
@@ -113,11 +113,10 @@ def initialize_server():
     """
     from pythonosc import dispatcher
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ip", default="0.0.0.0", help="The ip to listen on")
-    parser.add_argument("--port", type=int, default=8000, help="The port to listen on")
+    parser.add_argument("--ip", default=OSC_LISTEN_IP, help="The ip to listen on")
+    parser.add_argument("--port", type=int, default=OSC_LISTEN_PORT, help="The port to listen on")
     args = parser.parse_args()
     dispatcher = dispatcher.Dispatcher()
-    dispatcher.map("/fft", fft_handler)
     dispatcher.map("/Playback/Recorder/frameCount", frameCountHandler)
     dispatcher.map("/train", train_handler)
     dispatcher.map("/newModel", newModel_handler)
@@ -221,24 +220,25 @@ t2 does the prediction
 dout=[]
 t1 = threading.Thread(name='ledoutput', target=ledoutput)
 t1.start()
-e1.wait()
-while 0<1:
-    e1.clear()
-    prediction_input=np.empty([INPUT_DIM,NUM_SOUNDS])
-    for i in range(NUM_SOUNDS):
-        e1.clear()
-        for x in range(INPUT_DIM):
-            prediction_input[x,i]=fft.pop(0) # get the fft data via OSC from Ableton Live
-        if len(fft)<30:
-            e1.wait()
-    e1.clear()
-    #prediction_input = np.reshape=(prediction_input, (1,NUM_SOUNDS,INPUT_DIM))
-    prediction_input.shape=(1,NUM_SOUNDS,INPUT_DIM)
-    prediction_output=model.predict(prediction_input)
-    prediction_output=prediction_output.flatten()
-    print("Finished prediction with shape:" + str(prediction_output.shape))
-    print(prediction_output)
-    dout.append(prediction_output)
-    e2.set()
-    if len(fft)<30:
-        e1.wait()
+
+SPEC = SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
+
+def loop():
+    while 0<1:
+        for i in range(NUM_SOUNDS):
+            e1.acquire()
+        prediction_input=np.asarray([fft.pop() for x in range(NUM_SOUNDS)])
+        #prediction_input = np.reshape=(prediction_input, (1,NUM_SOUNDS,INPUT_DIM))
+        prediction_input.shape=(1,NUM_SOUNDS,INPUT_DIM)
+        prediction_output=model.predict(prediction_input)
+        prediction_output=prediction_output.flatten()
+        print("Finished prediction with shape:" + str(prediction_output.shape))
+        print(prediction_output)
+        dout.append(prediction_output)
+        e2.set()
+
+t2 = threading.Thread(name='prediction', target=loop)
+t2.start()
+
+while True:
+    SPEC.tick()
