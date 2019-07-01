@@ -10,6 +10,7 @@ import sys
 from pythonosc import osc_message_builder
 from pythonosc import udp_client
 import math
+import csv
 
 def createBins():
     theBins = []
@@ -89,6 +90,8 @@ class SpectrumAnalyzer:
         # Main loop
         if SHOW_GRAPH:
             plt.ion()
+        if DEBUG:
+            self.log = dict()
 
     def stream_callback(self, in_data, frame_count, time_info, status_flags):
         """
@@ -96,9 +99,11 @@ class SpectrumAnalyzer:
         """
         SEMAPHORE_GRAPH_SYNC.release()
         time_delta = time.time() - self.last_frame_timestamp
-        fps = 1.0 / time_delta
+        fps = int(1.0 / time_delta)
         self.last_frame_timestamp = time.time()
-        sys.stdout.write("\r{} FPS".format(int(fps)))
+        if DEBUG:
+            self.log_fps(self.last_frame_timestamp, fps)
+        sys.stdout.write("\r{} FPS".format(fps))
         sys.stdout.flush()
         self.data = np.frombuffer(in_data, dtype=np.float32)
         if self.binned:
@@ -128,6 +133,8 @@ class SpectrumAnalyzer:
             self.stream.close()
             if SHOW_GRAPH:
                 plt.close('all')
+            if DEBUG:
+                self.write_debug_log()
             print("\nEnd...")
             sys.exit(0)
 
@@ -197,6 +204,28 @@ class SpectrumAnalyzer:
         else:
             plt.plot(self.spec_x, self.spec_y, marker='o', linestyle='-')
         plt.pause(.02)
+
+    def log_fps(self, timestamp, fps):
+        """
+        write given fps to log dict, if there's already an entry for
+        the timestamp, update it
+        """
+        entry = {"fps": fps}
+        if timestamp in self.log:
+            self.log[timestamp].update(entry)
+        else:
+            self.log[timestamp] = entry
+
+    def write_debug_log(self):
+        with open("debug_log.csv", mode="w") as csv_file:
+            fieldnames = ["timestamp", "fps"]
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+            writer.writeheader()
+            print(self.log.items())
+            for key, val in self.log.items():
+                val.update({"timestamp": key})
+                print(val)
+                writer.writerow(val)
 
 if __name__ == "__main__":
     SPEC = SpectrumAnalyzer(lambda x: x, binned=True, send_osc=True)
