@@ -5,7 +5,6 @@ This module implements an binned fft spectrum analyzer
 from threading import Semaphore
 import numpy as np
 import pyaudio
-import matplotlib.pyplot as plt
 import time
 import sys
 from pythonosc import osc_message_builder
@@ -13,7 +12,7 @@ from pythonosc import udp_client
 
 DEBUG = True
 SHOW_GRAPH = True
-FPS = 40
+FPS = 30
 
 OSC_IP = "127.0.0.1"
 OSC_PORT = 8001
@@ -21,12 +20,15 @@ OSC_PORT = 8001
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 44100
-CHUNK = 2**10
+CHUNK = int(RATE/FPS)
 START = 0
-N = 2**10
+N = CHUNK
 WINDOW = np.hanning(N)
 BINS = [(a, a+665) for a in range(0, 19980, 666)]
 SEMAPHORE_GRAPH_SYNC = Semaphore(0)
+
+if SHOW_GRAPH:
+    import matplotlib.pyplot as plt
 
 def debug(str):
     if DEBUG:
@@ -72,28 +74,28 @@ class SpectrumAnalyzer:
         if self.send_osc:
             self.client = udp_client.SimpleUDPClient(OSC_IP, OSC_PORT)
         # Main loop
-        plt.ion()
+        if SHOW_GRAPH:
+            plt.ion()
 
     def stream_callback(self, in_data, frame_count, time_info, status_flags):
         """
         callback function for PyAudio stream
         """
-        if self.time_for_next_frame():
-            SEMAPHORE_GRAPH_SYNC.release()
-            time_delta = time.time() - self.last_frame_timestamp
-            fps = 1.0 / time_delta
-            self.last_frame_timestamp = time.time()
-            sys.stdout.write("\r{} FPS".format(int(fps)))
-            sys.stdout.flush()
-            self.data = np.frombuffer(in_data, dtype=np.float32)
-            if self.binned:
-                self.binned_fft()
-                self.fft_callback(self.fft_bins_y)
-            else:
-                self.fft()
-                self.fft_callback(self.spec_y)
-            if self.send_osc:
-                self.send_fft_osc()
+        SEMAPHORE_GRAPH_SYNC.release()
+        time_delta = time.time() - self.last_frame_timestamp
+        fps = 1.0 / time_delta
+        self.last_frame_timestamp = time.time()
+        sys.stdout.write("\r{} FPS".format(int(fps)))
+        sys.stdout.flush()
+        self.data = np.frombuffer(in_data, dtype=np.float32)
+        if self.binned:
+            self.binned_fft()
+            self.fft_callback(self.fft_bins_y)
+        else:
+            self.fft()
+            self.fft_callback(self.spec_y)
+        if self.send_osc:
+            self.send_fft_osc()
         return (None, pyaudio.paContinue)
 
     def send_fft_osc(self):
@@ -111,7 +113,8 @@ class SpectrumAnalyzer:
                 self.graphplot()
         except KeyboardInterrupt:
             self.stream.close()
-            plt.close('all')
+            if SHOW_GRAPH:
+                plt.close('all')
             print("\nEnd...")
             sys.exit(0)
 
@@ -157,9 +160,6 @@ class SpectrumAnalyzer:
             i += 1
         average = bin_sum / (i+1)
         return average
-
-    def time_for_next_frame(self):
-        return time.time() > self.last_frame_timestamp + self.frame_time_interval
 
     def graphplot(self):
         """
