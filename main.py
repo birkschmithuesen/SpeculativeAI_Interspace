@@ -18,6 +18,7 @@ from keras.utils.vis_utils import model_to_dot
 from keras.layers import Dense, LSTM, Dropout, Activation
 from keras.optimizers import SGD
 from keras.models import model_from_json
+from keras.models import load_model
 from keras import backend as kerasBackend
 import argparse
 import random
@@ -38,16 +39,20 @@ from fft import SpectrumAnalyzer
 # converts them to ArtNet
 UDP_IP = '127.0.0.1'
 UDP_PORT = 10005
-OSC_LISTEN_IP = "127.0.0.1"
+OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
+
+LOAD_MODEL = True
+SAVE_MODEL = False
 
 model = Sequential()
 
 INPUT_DIM = 30
-NUM_SOUNDS = 60  # 2 seconds and 30 sounds per second?
+NUM_SOUNDS = 1  # 2 seconds and 30 sounds per second?
 LSTM_OUT = 512
 BATCH_SIZE = 32
-EPOCHS = 32
+EPOCHS = 30
+INITIAL_EPOCHS = 100
 
 HIDDEN1_DIM = 1024
 OUTPUT_DIM = 13824
@@ -153,63 +158,38 @@ def ledoutput():
 
 initialize_server()
 
-#import fft and led input data
-file_name='traingsdata.txt'
-file = open(file_name)
-print('Loading Trainingsdata from File:', file_name,'  ...')
-values=loadtxt(file_name, dtype='float32')
-print('Trainingsdata points: ',values.shape[0])
-print()
-
-batch_size = (len(values)+1)/NUM_SOUNDS
-batch_size = int(batch_size)
-print("Batch size:" + str(batch_size))
-training_input = np.empty([batch_size, NUM_SOUNDS, INPUT_DIM])
-training_output = np.empty([batch_size, OUTPUT_DIM])
-
-input_batch = np.empty([NUM_SOUNDS, INPUT_DIM])
-output_batch = np.empty([NUM_SOUNDS, OUTPUT_DIM])
-batch_counter = 0
-# split up input rows into batches and seperate input and outputs in the values array
-for counter, row in enumerate(values):
-    if counter % NUM_SOUNDS is 0 and counter > 0:
-        training_input[batch_counter], training_output[batch_counter] = input_batch.copy(), output_batch.copy()
-        batch_counter += 1
-    input_batch[counter % NUM_SOUNDS] = values[counter,:-OUTPUT_DIM]
-    output_batch = values[counter,INPUT_DIM:]
-
-
-print('training_input shape: ', training_input.shape, 'training_output shape: ', training_output.shape)
-
 """
-Initialize NeuralNetwork with LSTM.
-ToDo: Make the input vector dimensions fit the LSTM (NUM_SOUNDS!)
+Initialize NeuralNetwork.
 """
-my_init=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
 
-model.add(keras.layers.LSTM(units=LSTM_OUT, input_shape=(NUM_SOUNDS, INPUT_DIM),
-                            return_sequences=False, name='lstm_layer'))
+if LOAD_MODEL:
+    model=load_model('model.h5')
+    model._make_predict_function()
+    print('Loaded saved model from file')
+else:
+    #import fft and led input data
+    file_name='traingsdata.txt'
+    file = open(file_name)
+    print('Loading Trainingsdata from File:', file_name,'  ...')
+    values=loadtxt(file_name, dtype='float32')
+    print('Trainingsdata points: ',values.shape[0])
+    print()
 
-# This is a hidden layer. You can use it or not.
-# In this case the activation can be ReLU. I write down 2048 output units but you can try other quantities
-model.add(keras.layers.Dense(units=HIDDEN1_DIM, activation='relu', name='hidden1_layer', kernel_initializer=my_init, bias_initializer=my_init))
+    #split into input and outputs
+    training_input, training_output = values[:,:-13824], values[:,30:]
+    print('training_input shape: ', training_input.shape, 'training_output shape: ', training_output.shape)
+    my_init=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
+    model.add(Dense(6144, activation='sigmoid', input_dim=30, kernel_initializer=my_init, bias_initializer=my_init))
+    model.add(Dense(13824, activation='sigmoid',kernel_initializer=my_init, bias_initializer=my_init))
+    sgd = SGD(lr=0.06, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
+    model.fit(training_input, training_output, epochs=INITIAL_EPOCHS, batch_size=32, shuffle=True)
+    model._make_predict_function()
+    print('Loaded new model')
 
-# the output layer must have 13000 units (one per led) and the activation has to be sigmoid
-model.add(keras.layers.Dense(units=OUTPUT_DIM, activation='sigmoid', name='output_layer', kernel_initializer=my_init, bias_initializer=my_init))
-
-# define the optimizer. You can use the optimizer that you want
-adam = keras.optimizers.Adam(lr=0.0001)
-
-# and finally use binary_crossentropy as loos function
-# model.compile(loss='binary_crossentropy', optimizer=adam)
-sgd = SGD(lr=0.06, decay=1e-6, momentum=0.9, nesterov=True)
-model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
-
-model.summary()
-model.fit(training_input, training_output, epochs=1, batch_size=BATCH_SIZE, shuffle=True)
-model._make_predict_function()
-print('Loaded new model')
-
+if SAVE_MODEL:
+    model.save('model.h5')
+    print('Saved new model 2 disk')
 
 """
 main loop:
@@ -229,11 +209,12 @@ def loop():
             e1.acquire()
         prediction_input=np.asarray([fft.pop() for x in range(NUM_SOUNDS)])
         #prediction_input = np.reshape=(prediction_input, (1,NUM_SOUNDS,INPUT_DIM))
-        prediction_input.shape=(1,NUM_SOUNDS,INPUT_DIM)
+        prediction_input.shape=(1,INPUT_DIM)
         prediction_output=model.predict(prediction_input)
         prediction_output=prediction_output.flatten()
-        print("Finished prediction with shape:" + str(prediction_output.shape))
-        print(prediction_output)
+        #print(prediction_input)
+        #print("Finished prediction with shape:" + str(prediction_output.shape))
+        #print(prediction_output)
         dout.append(prediction_output)
         e2.set()
 

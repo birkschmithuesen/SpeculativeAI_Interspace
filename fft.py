@@ -9,12 +9,23 @@ import time
 import sys
 from pythonosc import osc_message_builder
 from pythonosc import udp_client
+import math
 
-DEBUG = True
+def createBins():
+    theBins = []
+    startFreq = 30
+    for a in range(30):
+        endFreq = startFreq+math.exp((a+5)/4)
+        theRange = (startFreq, endFreq)
+        startFreq = endFreq
+        theBins.append(theRange)
+    return theBins
+
+DEBUG = False
 SHOW_GRAPH = True
 FPS = 30
 
-OSC_IP = "127.0.0.1"
+OSC_IP = "2.0.0.2"
 OSC_PORT = 8001
 
 FORMAT = pyaudio.paFloat32
@@ -24,7 +35,9 @@ CHUNK = int(RATE/FPS)
 START = 0
 N = CHUNK
 WINDOW = np.hanning(N)
-BINS = [(a, a+665) for a in range(0, 19980, 666)]
+BINS = createBins() #[(a, a+198) for a in range(30, 6000, 199)]
+#BINS = [(a, a+665) for a in range(20, 4000, 133)]
+
 SEMAPHORE_GRAPH_SYNC = Semaphore(0)
 
 if SHOW_GRAPH:
@@ -176,7 +189,7 @@ class SpectrumAnalyzer:
         # spectrum
         plt.subplot(312)
         axes = plt.gca()
-        axes.set_ylim([0,50])
+        axes.set_ylim([0,30])
         plt.xlabel("frequency [Hz]")
         plt.ylabel("amplitude spectrum")
         if self.binned:
