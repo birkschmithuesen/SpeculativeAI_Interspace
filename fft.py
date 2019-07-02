@@ -3,7 +3,6 @@ This module implements an binned fft spectrum analyzer
 """
 
 import os
-from threading import Semaphore
 import numpy as np
 import pyaudio
 import time
@@ -39,8 +38,6 @@ N = CHUNK
 WINDOW = np.hanning(N)
 BINS = createBins() #[(a, a+198) for a in range(30, 6000, 199)]
 #BINS = [(a, a+665) for a in range(20, 4000, 133)]
-
-SEMAPHORE_GRAPH_SYNC = Semaphore(0)
 
 if SHOW_GRAPH:
     import matplotlib.pyplot as plt
@@ -98,7 +95,6 @@ class SpectrumAnalyzer:
         """
         callback function for PyAudio stream
         """
-        SEMAPHORE_GRAPH_SYNC.release()
         time_delta = time.time() - self.last_frame_timestamp
         fps = int(1.0 / time_delta)
         self.last_frame_timestamp = time.time()
@@ -131,12 +127,8 @@ class SpectrumAnalyzer:
             if SHOW_GRAPH:
                 self.graphplot()
         except KeyboardInterrupt:
-            self.stream.close()
-            if SHOW_GRAPH:
-                plt.close('all')
-            if DEBUG:
-                self.write_debug_log()
-            print("\nEnd...")
+            self.quit()
+            print("\nProgram stopped...")
             sys.exit(0)
 
     def fft(self):
@@ -186,7 +178,6 @@ class SpectrumAnalyzer:
         """
         draw graph of audio and fft data
         """
-        SEMAPHORE_GRAPH_SYNC.acquire()
         plt.clf()
         # wave
         plt.subplot(311)
@@ -205,6 +196,17 @@ class SpectrumAnalyzer:
         else:
             plt.plot(self.spec_x, self.spec_y, marker='o', linestyle='-')
         plt.pause(.02)
+
+    def quit(self):
+        """
+        Quit the spectrum analyzer, closing audio stream and plots
+        as well as writing the debug log depending on settings.
+        """
+        self.stream.close()
+        if SHOW_GRAPH:
+            plt.close('all')
+        if DEBUG:
+            self.write_debug_log()
 
     def log_fps(self, timestamp, fps):
         """

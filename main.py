@@ -127,7 +127,7 @@ def initialize_server():
     dispatcher.map("/newModel", newModel_handler)
     try:
         server = osc_server.ThreadingOSCUDPServer((args.ip, args.port), dispatcher)
-        server_thread=threading.Thread(target=server.serve_forever)
+        server_thread=threading.Thread(target=server.serve_forever, daemon=True)
         server_thread.start()
     except OSError as e:
         server = None
@@ -198,7 +198,8 @@ t1 is sending the visual output data via OSC to the JAVA program that is display
 t2 does the prediction
 """
 dout=[]
-t1 = threading.Thread(name='ledoutput', target=ledoutput)
+t1 = threading.Thread(name='ledoutput', target=ledoutput, daemon=True)
+t1.daemon = True
 t1.start()
 
 SPEC = SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
@@ -218,12 +219,12 @@ def loop():
         dout.append(prediction_output)
         e2.set()
 
-t2 = threading.Thread(name='prediction', target=loop)
+t2 = threading.Thread(name='prediction', target=loop, daemon=True)
 t2.start()
 
 while True:
     try:
         SPEC.tick()
     except KeyboardInterrupt:
-        SPEC.write_debug_log()
+        SPEC.quit()
         sys.exit(0)
