@@ -2,6 +2,7 @@
 This module implements an binned fft spectrum analyzer
 """
 
+import os
 from threading import Semaphore
 import numpy as np
 import pyaudio
@@ -221,11 +222,11 @@ class SpectrumAnalyzer:
             fieldnames = ["timestamp", "fps"]
             writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
             writer.writeheader()
-            print(self.log.items())
             for key, val in self.log.items():
                 val.update({"timestamp": key})
-                print(val)
                 writer.writerow(val)
+            abspath = os.path.realpath(csv_file.name)
+            print("\n\nWritten log to {}".format(abspath))
 
 if __name__ == "__main__":
     SPEC = SpectrumAnalyzer(lambda x: x, binned=True, send_osc=True)
