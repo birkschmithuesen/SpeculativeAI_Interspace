@@ -13,10 +13,14 @@ import math
 import csv
 
 def createBins():
+    """
+    creates the BIN Array for the FFT. The function creates bigger intervals for higher frequencies
+    """
     theBins = []
-    startFreq = 30
-    for a in range(30):
-        endFreq = startFreq+math.exp((a+5)/4)
+    startFreq = 20
+    stepFactor = 1.5
+    for a in range(128):
+        endFreq = startFreq+((a+15)*stepFactor)
         theRange = (startFreq, endFreq)
         startFreq = endFreq
         theBins.append(theRange)
@@ -24,7 +28,7 @@ def createBins():
 
 DEBUG = False
 SHOW_GRAPH = True
-FPS = 30
+FPS = 44.1
 
 OSC_IP = "2.0.0.2"
 OSC_PORT = 8001
@@ -32,12 +36,12 @@ OSC_PORT = 8001
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 44100
-CHUNK = int(RATE/FPS)
+CHUNK = 1024 # int(RATE/FPS)
 START = 0
 N = CHUNK
 WINDOW = np.hanning(N)
 BINS = createBins() #[(a, a+198) for a in range(30, 6000, 199)]
-#BINS = [(a, a+665) for a in range(20, 4000, 133)]
+#BINS = [(a, a+82) for a in range(20, 10020, 83)]
 
 if SHOW_GRAPH:
     import matplotlib.pyplot as plt
