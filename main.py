@@ -222,4 +222,8 @@ t2 = threading.Thread(name='prediction', target=loop)
 t2.start()
 
 while True:
-    SPEC.tick()
+    try:
+        SPEC.tick()
+    except KeyboardInterrupt:
+        SPEC.write_debug_log()
+        sys.exit(0)
