@@ -32,8 +32,9 @@ from pythonosc import osc_server
 from multiprocessing import Process, Queue
 import numpy as np
 import os
+from collections import deque
 from numpy import loadtxt
-from fft import SpectrumAnalyzer
+from fft import SpectrumAnalyzer, FPS
 
 # the ip and port to send the LED data to. The program Ortlicht receives them via OSC and
 # converts them to ArtNet
@@ -46,6 +47,8 @@ LOAD_MODEL = True
 SAVE_MODEL = False
 
 model = Sequential()
+
+PREDICTION_BUFFER_MAXLEN = 264 # 6 seconds * 44.1 fps
 
 INPUT_DIM = 30
 NUM_SOUNDS = 1  # 2 seconds and 30 sounds per second?
@@ -66,8 +69,9 @@ OUTPUT_DIM = 13824
 
 
 fft=[]
+prediction_buffer = deque(maxlen=PREDICTION_BUFFER_MAXLEN)
 e1 = threading.Semaphore(0)
-e2 = threading.Event()
+pause_event = threading.Event()
 
 def fft_callback_function(fft_data):
     """
@@ -141,20 +145,21 @@ def ledoutput():
     when a new prediction is ready, it sends the LED data via OSC to 'Ortlicht'
     """
     sock=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    e2.wait()
+    pause_event.wait()
     while True:
-        e2.clear()
-        prediction_output=dout.pop(0)
-        prediction_output=np.multiply(prediction_output,255)
-        prediction_output=prediction_output.astype(np.uint8)
-        for x in range(10):
-          ledValues=prediction_output[(x*1402):((x+1)*1402):1]
-          header=struct.pack('!IBB',frameCount,x,0)
-          message=header+bytes(ledValues.tolist())
-          sock.sendto(message, (UDP_IP, UDP_PORT))
+        pause_event.clear()
+        while len(prediction_buffer) > 0:
+            prediction_output = prediction_buffer.popleft()
+            prediction_output=np.multiply(prediction_output,255)
+            prediction_output=prediction_output.astype(np.uint8)
+            for x in range(10):
+                ledValues=prediction_output[(x*1402):((x+1)*1402):1]
+                header=struct.pack('!IBB',frameCount,x,0)
+                message=header+bytes(ledValues.tolist())
+                sock.sendto(message, (UDP_IP, UDP_PORT))
+            time.sleep(1/FPS) #ensure playback speed matches framerate
         #wait till the next frame package is ready
-        if(len(dout) < 1):
-            e2.wait()
+        pause_event.wait()
 
 initialize_server()
 
@@ -197,7 +202,7 @@ we have two threads:
 t1 is sending the visual output data via OSC to the JAVA program that is displaying it on the visual object
 t2 does the prediction
 """
-dout=[]
+
 t1 = threading.Thread(name='ledoutput', target=ledoutput, daemon=True)
 t1.daemon = True
 t1.start()
@@ -216,8 +221,9 @@ def loop():
         #print(prediction_input)
         #print("Finished prediction with shape:" + str(prediction_output.shape))
         #print(prediction_output)
-        dout.append(prediction_output)
-        e2.set()
+        prediction_buffer.append(prediction_output)
+        if len(prediction_buffer) == PREDICTION_BUFFER_MAXLEN:
+            pause_event.set()
 
 t2 = threading.Thread(name='prediction', target=loop, daemon=True)
 t2.start()
