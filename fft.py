@@ -28,7 +28,7 @@ def createBins():
 
 DEBUG = False
 SHOW_GRAPH = True
-FPS = 44.1
+FPS = RATE/CHUNK # ca 44.1
 
 OSC_IP = "2.0.0.2"
 OSC_PORT = 8001
