@@ -32,6 +32,7 @@ from pythonosc import osc_server
 from multiprocessing import Process, Queue
 import numpy as np
 import os
+import random
 from collections import deque
 from numpy import loadtxt
 from fft import SpectrumAnalyzer, FPS
@@ -48,7 +49,7 @@ SAVE_MODEL = False
 
 model = Sequential()
 
-PREDICTION_BUFFER_MAXLEN = 264 # 6 seconds * 44.1 fps
+PREDICTION_BUFFER_MAXLEN = 441 # 10 seconds * 44.1 fps
 
 INPUT_DIM = 128
 NUM_SOUNDS = 1
@@ -217,7 +218,9 @@ def loop():
         #print(prediction_input)
         #print("Finished prediction with shape:" + str(prediction_output.shape))
         #print(prediction_output)
-        prediction_buffer.append(prediction_output)
+        random_value = random.randint(0,3)
+        for i in range(random_value):
+            prediction_buffer.append(prediction_output)
         if len(prediction_buffer) == PREDICTION_BUFFER_MAXLEN:
             pause_event.set()
 
