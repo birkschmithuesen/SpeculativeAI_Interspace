@@ -51,7 +51,7 @@ model = Sequential()
 
 PREDICTION_BUFFER_MAXLEN = 441 # 10 seconds * 44.1 fps
 PAUSE_LENGTH = 88 # length in frames of silence that triggers pause event
-PAUSE_SILENCE_THRESH = 400 # Threshhold defining pause if sum(fft) is below the value
+PAUSE_SILENCE_THRESH = 50 # Threshhold defining pause if sum(fft) is below the value
 
 INPUT_DIM = 128
 NUM_SOUNDS = 1
@@ -164,7 +164,10 @@ def is_pause(fft_data):
     return True if a pause in the fft stream was detected else return False
     """
     global pause_counter
-    if sum(fft_data) < PAUSE_SILENCE_THRESH:
+    fft_sum = 0
+    for fft_frame in fft_data:
+        fft_sum += sum(fft_frame)
+    if fft_sum < PAUSE_SILENCE_THRESH:
         if pause_counter >= PAUSE_LENGTH:
             pause_counter = 0
             return True
@@ -228,9 +231,10 @@ def loop():
     while 0<1:
         for i in range(NUM_SOUNDS):
             e1.acquire()
-        prediction_input=np.asarray([fft.pop() for x in range(NUM_SOUNDS)])
+        prediction_fft_input = [fft.pop() for x in range(NUM_SOUNDS)]
+        prediction_input=np.asarray(prediction_fft_input)
         #prediction_input = np.reshape=(prediction_input, (1,NUM_SOUNDS,INPUT_DIM))
-        if is_pause(fft):
+        if is_pause(prediction_fft_input):
             pause_event.set()
             continue
         prediction_input.shape=(1,INPUT_DIM)
