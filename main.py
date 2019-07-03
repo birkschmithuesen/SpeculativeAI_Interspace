@@ -50,6 +50,8 @@ SAVE_MODEL = False
 model = Sequential()
 
 PREDICTION_BUFFER_MAXLEN = 441 # 10 seconds * 44.1 fps
+PAUSE_LENGTH = 88 # length in frames of silence that triggers pause event
+PAUSE_SILENCE_THRESH = 400 # Threshhold defining pause if sum(fft) is below the value
 
 INPUT_DIM = 128
 NUM_SOUNDS = 1
@@ -63,10 +65,11 @@ OUTPUT_DIM = 13824
 
 
 
-fft=[]
+fft = []
 prediction_buffer = deque(maxlen=PREDICTION_BUFFER_MAXLEN)
 e1 = threading.Semaphore(0)
 pause_event = threading.Event()
+pause_counter = 0
 
 def fft_callback_function(fft_data):
     """
@@ -156,6 +159,21 @@ def ledoutput():
         #wait till the next frame package is ready
         pause_event.wait()
 
+def is_pause(fft_data):
+    """
+    return True if a pause in the fft stream was detected else return False
+    """
+    global pause_counter
+    if sum(fft_data) < PAUSE_SILENCE_THRESH:
+        if pause_counter >= PAUSE_LENGTH:
+            pause_counter = 0
+            return True
+        pause_counter += 1
+    else:
+        pause_counter = 0
+    return False
+
+
 initialize_server()
 
 """
@@ -212,6 +230,9 @@ def loop():
             e1.acquire()
         prediction_input=np.asarray([fft.pop() for x in range(NUM_SOUNDS)])
         #prediction_input = np.reshape=(prediction_input, (1,NUM_SOUNDS,INPUT_DIM))
+        if is_pause(fft):
+            pause_event.set()
+            continue
         prediction_input.shape=(1,INPUT_DIM)
         prediction_output=model.predict(prediction_input)
         prediction_output=prediction_output.flatten()
@@ -221,8 +242,6 @@ def loop():
         random_value = random.randint(0,3)
         for i in range(random_value):
             prediction_buffer.append(prediction_output)
-        if len(prediction_buffer) == PREDICTION_BUFFER_MAXLEN:
-            pause_event.set()
 
 t2 = threading.Thread(name='prediction', target=loop, daemon=True)
 t2.start()
