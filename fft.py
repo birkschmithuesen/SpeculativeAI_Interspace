@@ -28,7 +28,7 @@ def createBins():
 
 DEBUG = False
 SHOW_GRAPH = True
-FPS = RATE/CHUNK # ca 44.1
+
 
 OSC_IP = "2.0.0.2"
 OSC_PORT = 8001
@@ -37,6 +37,7 @@ FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 44100
 CHUNK = 1024 # int(RATE/FPS)
+FPS = RATE/CHUNK # ca 44.1
 START = 0
 N = CHUNK
 WINDOW = np.hanning(N)
