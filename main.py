@@ -39,7 +39,7 @@ from fft import SpectrumAnalyzer, FPS
 
 # the ip and port to send the LED data to. The program Ortlicht receives them via OSC and
 # converts them to ArtNet
-UDP_IP = '2.0.0.2'
+UDP_IP = '0.0.0.0'
 UDP_PORT = 10005
 OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
@@ -97,7 +97,7 @@ def newModel_handler(unused_addr, args):
 
     model.add(Dense(6144, activation='sigmoid', input_dim=30, kernel_initializer=my_init,
                     bias_initializer=my_init))
-    model.add(Dense(13824, activation='sigmoid',kernel_initializer=my_init,
+    model.add(Dense(OUTPUT_DIM, activation='sigmoid',kernel_initializer=my_init,
                     bias_initializer=my_init))
     sgd = SGD(lr=0.06, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
@@ -145,7 +145,6 @@ def ledoutput():
     sock=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     pause_event.wait()
     while True:
-        pause_event.clear()
         while len(prediction_buffer) > 0:
             prediction_output = prediction_buffer.popleft()
             prediction_output=np.multiply(prediction_output,255)
@@ -157,6 +156,7 @@ def ledoutput():
                 sock.sendto(message, (UDP_IP, UDP_PORT))
             time.sleep(1/FPS) #ensure playback speed matches framerate
         #wait till the next frame package is ready
+        pause_event.clear()
         pause_event.wait()
 
 def is_pause(fft_data):
@@ -197,7 +197,7 @@ else:
     print()
 
     #split into input and outputs
-    training_input, training_output = values[:,:-13824], values[:,INPUT_DIM:]
+    training_input, training_output = values[:,:-OUTPUT_DIM], values[:,INPUT_DIM:]
     print('training_input shape: ', training_input.shape, 'training_output shape: ', training_output.shape)
     my_init=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
     model.add(Dense(HIDDEN1_DIM, activation='sigmoid', input_dim=INPUT_DIM, kernel_initializer=my_init, bias_initializer=my_init))
@@ -232,17 +232,18 @@ def loop():
         for i in range(NUM_SOUNDS):
             e1.acquire()
         prediction_fft_input = [fft.pop() for x in range(NUM_SOUNDS)]
+        if pause_event.isSet():
+            continue
         prediction_input=np.asarray(prediction_fft_input)
-        #prediction_input = np.reshape=(prediction_input, (1,NUM_SOUNDS,INPUT_DIM))
         if is_pause(prediction_fft_input):
+            #remove pause from buffer
+            for i in range(PAUSE_LENGTH-1):
+                prediction_buffer.pop()
             pause_event.set()
             continue
         prediction_input.shape=(1,INPUT_DIM)
         prediction_output=model.predict(prediction_input)
         prediction_output=prediction_output.flatten()
-        #print(prediction_input)
-        #print("Finished prediction with shape:" + str(prediction_output.shape))
-        #print(prediction_output)
         random_value = random.randint(0,3)
         for i in range(random_value):
             prediction_buffer.append(prediction_output)
