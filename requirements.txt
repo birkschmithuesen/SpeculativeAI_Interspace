@@ -1,4 +1,4 @@
 Keras==2.2.4
 python-osc==1.7.0
 pyaudio==0.2.11
-Python-osc==1.7.0
+Python-osc==1.7.0 

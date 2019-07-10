@@ -39,7 +39,7 @@ from fft import SpectrumAnalyzer, FPS
 
 # the ip and port to send the LED data to. The program Ortlicht receives them via OSC and
 # converts them to ArtNet
-UDP_IP = '0.0.0.0'
+UDP_IP = '127.0.0.1'
 UDP_PORT = 10005
 OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
@@ -52,6 +52,8 @@ model = Sequential()
 PREDICTION_BUFFER_MAXLEN = 441 # 10 seconds * 44.1 fps
 PAUSE_LENGTH = 88 # length in frames of silence that triggers pause event
 PAUSE_SILENCE_THRESH = 50 # Threshhold defining pause if sum(fft) is below the value
+MIN_FRAME_REPLAYS = 0 # set the minimum times, how often a frame will be written into the buffer
+MAX_FRAME_REPLAYS = 2 # set the maximum times, how often a frame will be written into the buffer
 
 INPUT_DIM = 128
 NUM_SOUNDS = 1
@@ -168,10 +170,10 @@ def is_pause(fft_data):
     for fft_frame in fft_data:
         fft_sum += sum(fft_frame)
     if fft_sum < PAUSE_SILENCE_THRESH:
+        pause_counter += 1
         if pause_counter >= PAUSE_LENGTH:
             pause_counter = 0
             return True
-        pause_counter += 1
     else:
         pause_counter = 0
     return False
@@ -244,7 +246,7 @@ def loop():
         prediction_input.shape=(1,INPUT_DIM)
         prediction_output=model.predict(prediction_input)
         prediction_output=prediction_output.flatten()
-        random_value = random.randint(0,3)
+        random_value = random.randint(MIN_FRAME_REPLAYS,MAX_FRAME_REPLAYS)
         for i in range(random_value):
             prediction_buffer.append(prediction_output)
 
