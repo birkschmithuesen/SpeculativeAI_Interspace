@@ -36,7 +36,9 @@ import random
 from collections import deque
 from numpy import loadtxt
 from fft import SpectrumAnalyzer, FPS
+import os
 
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the computed
 # the ip and port to send the LED data to. The program Ortlicht receives them via OSC and
 # converts them to ArtNet
 UDP_IP = '127.0.0.1'
@@ -50,16 +52,16 @@ SAVE_MODEL = False
 model = Sequential()
 
 PREDICTION_BUFFER_MAXLEN = 441 # 10 seconds * 44.1 fps
-PAUSE_LENGTH = 88 # length in frames of silence that triggers pause event
-PAUSE_SILENCE_THRESH = 50 # Threshhold defining pause if sum(fft) is below the value
-MIN_FRAME_REPLAYS = 0 # set the minimum times, how often a frame will be written into the buffer
-MAX_FRAME_REPLAYS = 2 # set the maximum times, how often a frame will be written into the buffer
+PAUSE_LENGTH = 44 # length in frames of silence that triggers pause event
+PAUSE_SILENCE_THRESH = 0.4 # Threshhold defining pause if sum(fft) is below the value
+MIN_FRAME_REPLAYS = 1 # set the minimum times, how often a frame will be written into the buffer
+MAX_FRAME_REPLAYS = 1 # set the maximum times, how often a frame will be written into the buffer
 
 INPUT_DIM = 128
 NUM_SOUNDS = 1
 BATCH_SIZE = 32
 EPOCHS = 30
-INITIAL_EPOCHS = 500
+INITIAL_EPOCHS = 150
 
 HIDDEN1_DIM = 512
 HIDDEN2_DIM = 4096
@@ -148,6 +150,7 @@ def ledoutput():
     pause_event.wait()
     while True:
         while len(prediction_buffer) > 0:
+            print("Play Frame", len(prediction_buffer))
             prediction_output = prediction_buffer.popleft()
             prediction_output=np.multiply(prediction_output,255)
             prediction_output=prediction_output.astype(np.uint8)
@@ -169,8 +172,10 @@ def is_pause(fft_data):
     fft_sum = 0
     for fft_frame in fft_data:
         fft_sum += sum(fft_frame)
+    print("fft_sum: ", fft_sum)
     if fft_sum < PAUSE_SILENCE_THRESH:
         pause_counter += 1
+        print("Pause_detected: ", pause_counter)
         if pause_counter >= PAUSE_LENGTH:
             pause_counter = 0
             return True
@@ -239,8 +244,11 @@ def loop():
         prediction_input=np.asarray(prediction_fft_input)
         if is_pause(prediction_fft_input):
             #remove pause from buffer
+            print("REPLAY!!!!");
+
             for i in range(PAUSE_LENGTH-1):
                 prediction_buffer.pop()
+
             pause_event.set()
             continue
         prediction_input.shape=(1,INPUT_DIM)
