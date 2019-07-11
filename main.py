@@ -52,8 +52,8 @@ SAVE_MODEL = False
 model = Sequential()
 
 PREDICTION_BUFFER_MAXLEN = 441 # 10 seconds * 44.1 fps
-PAUSE_LENGTH = 44 # length in frames of silence that triggers pause event
-PAUSE_SILENCE_THRESH = 0.4 # Threshhold defining pause if sum(fft) is below the value
+PAUSE_LENGTH = 90 # length in frames of silence that triggers pause event
+PAUSE_SILENCE_THRESH = 10 # Threshhold defining pause if sum(fft) is below the value
 MIN_FRAME_REPLAYS = 1 # set the minimum times, how often a frame will be written into the buffer
 MAX_FRAME_REPLAYS = 1 # set the maximum times, how often a frame will be written into the buffer
 
@@ -68,7 +68,7 @@ HIDDEN2_DIM = 4096
 OUTPUT_DIM = 13824
 
 
-
+was_talking = True #stores the last action True -> Talking; False -> Listening
 fft = []
 prediction_buffer = deque(maxlen=PREDICTION_BUFFER_MAXLEN)
 e1 = threading.Semaphore(0)
@@ -146,19 +146,27 @@ def ledoutput():
     runs parallel in a single thread
     when a new prediction is ready, it sends the LED data via OSC to 'Ortlicht'
     """
+    #global was_talking
     sock=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     pause_event.wait()
     while True:
         while len(prediction_buffer) > 0:
-            print("Play Frame", len(prediction_buffer))
-            prediction_output = prediction_buffer.popleft()
-            prediction_output=np.multiply(prediction_output,255)
-            prediction_output=prediction_output.astype(np.uint8)
+            if len(prediction_buffer) < 2:
+                #the last values for the LEDs should be black / 0
+                prediction_output = prediction_buffer.popleft()
+                prediction_output=np.multiply(prediction_output,0)
+                prediction_output=prediction_output.astype(np.uint8)
+            else:
+                prediction_output = prediction_buffer.popleft()
+                prediction_output=np.multiply(prediction_output,255)
+                prediction_output=prediction_output.astype(np.uint8)
             for x in range(10):
                 ledValues=prediction_output[(x*1402):((x+1)*1402):1]
                 header=struct.pack('!IBB',frameCount,x,0)
                 message=header+bytes(ledValues.tolist())
                 sock.sendto(message, (UDP_IP, UDP_PORT))
+            print("Play Frame", len(prediction_buffer))
+            #was_talking = True
             time.sleep(1/FPS) #ensure playback speed matches framerate
         #wait till the next frame package is ready
         pause_event.clear()
@@ -169,6 +177,7 @@ def is_pause(fft_data):
     return True if a pause in the fft stream was detected else return False
     """
     global pause_counter
+    global was_talking
     fft_sum = 0
     for fft_frame in fft_data:
         fft_sum += sum(fft_frame)
@@ -176,10 +185,15 @@ def is_pause(fft_data):
     if fft_sum < PAUSE_SILENCE_THRESH:
         pause_counter += 1
         print("Pause_detected: ", pause_counter)
-        if pause_counter >= PAUSE_LENGTH:
+        print("Was Talking:", was_talking)
+        if was_talking: the_pause_length = 2 * PAUSE_LENGTH
+        else: the_pause_length = PAUSE_LENGTH
+        if pause_counter >= the_pause_length:
             pause_counter = 0
             return True
     else:
+        print("LISTENING!")
+        was_talking = False
         pause_counter = 0
     return False
 
@@ -235,6 +249,7 @@ t1.start()
 SPEC = SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
 
 def loop():
+    global was_talking
     while 0<1:
         for i in range(NUM_SOUNDS):
             e1.acquire()
@@ -245,10 +260,10 @@ def loop():
         if is_pause(prediction_fft_input):
             #remove pause from buffer
             print("REPLAY!!!!");
-
+            was_talking = True
+            print("was talking", was_talking)
             for i in range(PAUSE_LENGTH-1):
                 prediction_buffer.pop()
-
             pause_event.set()
             continue
         prediction_input.shape=(1,INPUT_DIM)
