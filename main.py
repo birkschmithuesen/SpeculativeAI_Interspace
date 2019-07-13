@@ -42,8 +42,8 @@ UDP_PORT = 10005
 OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
 
-LOAD_MODEL = False
-SAVE_MODEL = True
+LOAD_MODEL = True
+SAVE_MODEL = False
 
 model = Sequential()
 
