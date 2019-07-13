@@ -52,7 +52,7 @@ SAVE_MODEL = False
 model = Sequential()
 
 PREDICTION_BUFFER_MAXLEN = 441 # 10 seconds * 44.1 fps
-PAUSE_LENGTH = 90 # length in frames of silence that triggers pause event
+PAUSE_LENGTH = 9 # length in frames of silence that triggers pause event
 PAUSE_SILENCE_THRESH = 10 # Threshhold defining pause if sum(fft) is below the value
 MIN_FRAME_REPLAYS = 1 # set the minimum times, how often a frame will be written into the buffer
 MAX_FRAME_REPLAYS = 1 # set the maximum times, how often a frame will be written into the buffer
@@ -69,6 +69,7 @@ OUTPUT_DIM = 13824
 
 
 was_talking = True #stores the last action True -> Talking; False -> Listening
+detect_silence = False
 fft = []
 prediction_buffer = deque(maxlen=PREDICTION_BUFFER_MAXLEN)
 e1 = threading.Semaphore(0)
@@ -178,20 +179,23 @@ def is_pause(fft_data):
     """
     global pause_counter
     global was_talking
+    global detect_silence
     fft_sum = 0
     for fft_frame in fft_data:
         fft_sum += sum(fft_frame)
     print("fft_sum: ", fft_sum)
     if fft_sum < PAUSE_SILENCE_THRESH:
+        detect_silence = True
         pause_counter += 1
         print("Pause_detected: ", pause_counter)
         print("Was Talking:", was_talking)
-        if was_talking: the_pause_length = 2 * PAUSE_LENGTH
+        if was_talking: the_pause_length = 4 * PAUSE_LENGTH
         else: the_pause_length = PAUSE_LENGTH
         if pause_counter >= the_pause_length:
             pause_counter = 0
             return True
     else:
+        detect_silence = False
         print("LISTENING!")
         was_talking = False
         pause_counter = 0
@@ -250,6 +254,7 @@ SPEC = SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
 
 def loop():
     global was_talking
+    global detect_silence
     while 0<1:
         for i in range(NUM_SOUNDS):
             e1.acquire()
@@ -261,17 +266,21 @@ def loop():
             #remove pause from buffer
             print("REPLAY!!!!");
             was_talking = True
-            print("was talking", was_talking)
-            for i in range(PAUSE_LENGTH-1):
-                prediction_buffer.pop()
+            #print("was talking", was_talking)
+            #for i in range(PAUSE_LENGTH-1):
+                #prediction_buffer.pop()
+                #prediction_buffer.pop(0)
+
             pause_event.set()
             continue
-        prediction_input.shape=(1,INPUT_DIM)
-        prediction_output=model.predict(prediction_input)
-        prediction_output=prediction_output.flatten()
-        random_value = random.randint(MIN_FRAME_REPLAYS,MAX_FRAME_REPLAYS)
-        for i in range(random_value):
-            prediction_buffer.append(prediction_output)
+        if not detect_silence:
+            prediction_input.shape=(1,INPUT_DIM)
+            prediction_output=model.predict(prediction_input)
+            prediction_output=prediction_output.flatten()
+            random_value = random.randint(MIN_FRAME_REPLAYS,MAX_FRAME_REPLAYS)
+            for i in range(random_value):
+                prediction_buffer.append(prediction_output)
+            print("buffer", len(prediction_buffer))
 
 t2 = threading.Thread(name='prediction', target=loop, daemon=True)
 t2.start()
