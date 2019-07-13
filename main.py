@@ -37,7 +37,7 @@ from fft import SpectrumAnalyzer
 
 # the ip and port to send the LED data to. The program Ortlicht receives them via OSC and
 # converts them to ArtNet
-UDP_IP = '2.0.0.2'
+UDP_IP = '127.0.0.1'
 UDP_PORT = 10005
 OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000

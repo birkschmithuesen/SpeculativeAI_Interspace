@@ -30,7 +30,7 @@ DEBUG = False
 SHOW_GRAPH = True
 FPS = 44.1
 
-OSC_IP = "2.0.0.2"
+OSC_IP = "127.0.0.1"
 OSC_PORT = 8001
 
 FORMAT = pyaudio.paFloat32
@@ -100,6 +100,8 @@ class SpectrumAnalyzer:
         callback function for PyAudio stream
         """
         time_delta = time.time() - self.last_frame_timestamp
+        if time_delta == 0:
+            time_delta = sys.float_info.min
         fps = int(1.0 / time_delta)
         self.last_frame_timestamp = time.time()
         if DEBUG:
