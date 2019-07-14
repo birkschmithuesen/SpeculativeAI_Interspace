@@ -69,7 +69,7 @@ OUTPUT_DIM = 13824
 
 
 was_talking = True #stores the last action True -> Talking; False -> Listening
-detect_silence = False
+frame_has_sound = threading.Event()
 fft = []
 prediction_buffer = deque(maxlen=PREDICTION_BUFFER_MAXLEN)
 e1 = threading.Semaphore(0)
@@ -173,19 +173,27 @@ def ledoutput():
         pause_event.clear()
         pause_event.wait()
 
+def is_silence(fft_data):
+    """
+    Returns true if sum(fft_data) > PAUSE_SILENCE_THRESH
+    false otherwise
+    """
+    fft_sum = 0
+    for fft_frame in fft_data:
+        fft_sum += sum(fft_frame)
+    print("fft_sum: ", fft_sum)
+    return fft_sum < PAUSE_SILENCE_THRESH
+
+
 def is_pause(fft_data):
     """
     return True if a pause in the fft stream was detected else return False
     """
     global pause_counter
     global was_talking
-    global detect_silence
-    fft_sum = 0
-    for fft_frame in fft_data:
-        fft_sum += sum(fft_frame)
-    print("fft_sum: ", fft_sum)
-    if fft_sum < PAUSE_SILENCE_THRESH:
-        detect_silence = True
+    global frame_has_sound
+    if is_silence(fft_data):
+        frame_has_sound.set()
         pause_counter += 1
         print("Pause_detected: ", pause_counter)
         print("Was Talking:", was_talking)
@@ -195,7 +203,7 @@ def is_pause(fft_data):
             pause_counter = 0
             return True
     else:
-        detect_silence = False
+        frame_has_sound.clear()
         print("LISTENING!")
         was_talking = False
         pause_counter = 0
@@ -254,13 +262,14 @@ SPEC = SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
 
 def loop():
     global was_talking
-    global detect_silence
+    global frame_has_sound
     while 0<1:
         for i in range(NUM_SOUNDS):
             e1.acquire()
         prediction_fft_input = [fft.pop() for x in range(NUM_SOUNDS)]
         if pause_event.isSet():
             continue
+        print(sum(prediction_fft_input[0]))
         prediction_input=np.asarray(prediction_fft_input)
         if is_pause(prediction_fft_input):
             #remove pause from buffer
@@ -273,7 +282,7 @@ def loop():
 
             pause_event.set()
             continue
-        if not detect_silence:
+        if frame_has_sound.isSet():
             prediction_input.shape=(1,INPUT_DIM)
             prediction_output=model.predict(prediction_input)
             prediction_output=prediction_output.flatten()
