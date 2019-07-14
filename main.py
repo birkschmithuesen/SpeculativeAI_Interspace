@@ -295,7 +295,7 @@ def loop():
                 prediction_buffer.append(prediction_output)
             print("buffer", len(prediction_buffer))
         else:
-            time.sleep(0.005)
+            time.sleep(0.02)
 
 t2 = threading.Thread(name='prediction', target=loop, daemon=True)
 t2.start()
