@@ -37,6 +37,7 @@ from collections import deque
 from numpy import loadtxt
 from fft import SpectrumAnalyzer, FPS
 import os
+import math
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the computed
 # the ip and port to send the LED data to. The program Ortlicht receives them via OSC and
@@ -68,7 +69,8 @@ HIDDEN2_DIM = 4096
 OUTPUT_DIM = 13824
 
 
-was_talking = True #stores the last action True -> Talking; False -> Listening
+was_talking = threading.Event() #stores the last action True -> Talking; False -> Listening
+was_talking.set()
 frame_has_sound = threading.Event()
 fft = []
 prediction_buffer = deque(maxlen=PREDICTION_BUFFER_MAXLEN)
@@ -178,10 +180,13 @@ def is_silence(fft_data):
     Returns true if sum(fft_data) > PAUSE_SILENCE_THRESH
     false otherwise
     """
+    timestamp = SPEC.last_frame_timestamp
     fft_sum = 0
     for fft_frame in fft_data:
-        fft_sum += sum(fft_frame)
+        fft_sum += math.fsum(fft_frame)
     print("fft_sum: ", fft_sum)
+    #SPEC.log_fft(timestamp, fft_data[0])
+    #SPEC.log_entry(timestamp, {"sum": fft_sum})
     return fft_sum < PAUSE_SILENCE_THRESH
 
 
@@ -193,19 +198,19 @@ def is_pause(fft_data):
     global was_talking
     global frame_has_sound
     if is_silence(fft_data):
-        frame_has_sound.set()
+        frame_has_sound.clear()
         pause_counter += 1
         print("Pause_detected: ", pause_counter)
-        print("Was Talking:", was_talking)
-        if was_talking: the_pause_length = 4 * PAUSE_LENGTH
+        print("Was Talking:", was_talking.isSet())
+        if was_talking.isSet(): the_pause_length = 4 * PAUSE_LENGTH
         else: the_pause_length = PAUSE_LENGTH
         if pause_counter >= the_pause_length:
             pause_counter = 0
             return True
     else:
-        frame_has_sound.clear()
+        frame_has_sound.set()
         print("LISTENING!")
-        was_talking = False
+        was_talking.clear()
         pause_counter = 0
     return False
 
@@ -269,12 +274,11 @@ def loop():
         prediction_fft_input = [fft.pop() for x in range(NUM_SOUNDS)]
         if pause_event.isSet():
             continue
-        print(sum(prediction_fft_input[0]))
         prediction_input=np.asarray(prediction_fft_input)
         if is_pause(prediction_fft_input):
             #remove pause from buffer
             print("REPLAY!!!!");
-            was_talking = True
+            was_talking.set()
             #print("was talking", was_talking)
             #for i in range(PAUSE_LENGTH-1):
                 #prediction_buffer.pop()
@@ -290,6 +294,8 @@ def loop():
             for i in range(random_value):
                 prediction_buffer.append(prediction_output)
             print("buffer", len(prediction_buffer))
+        else:
+            time.sleep(0.005)
 
 t2 = threading.Thread(name='prediction', target=loop, daemon=True)
 t2.start()
