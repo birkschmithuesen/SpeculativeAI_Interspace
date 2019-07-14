@@ -193,7 +193,7 @@ def is_pause(fft_data):
     global was_talking
     global frame_has_sound
     if is_silence(fft_data):
-        frame_has_sound.set()
+        frame_has_sound.clear()
         pause_counter += 1
         print("Pause_detected: ", pause_counter)
         print("Was Talking:", was_talking)
@@ -203,7 +203,7 @@ def is_pause(fft_data):
             pause_counter = 0
             return True
     else:
-        frame_has_sound.clear()
+        frame_has_sound.set()
         print("LISTENING!")
         was_talking = False
         pause_counter = 0
