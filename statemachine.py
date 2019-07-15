@@ -9,7 +9,7 @@ The computation process is structured in the following way:
 2. input: receive audio
 3. FFT analysis: separate continues audio stream into 30 frequency bands with a frequency of 44fps
 4. prediction: convert the FFT analysis results to feed into a neural network.
-    Predict predict the brightness values of the 13824 Leds of the Interspace object
+   This neural net predicts the brightness values of the 13824 Leds of the Interspace object
 """
 
 import random
@@ -71,24 +71,23 @@ def ledoutput():
     runs parallel in a single thread
     when a new prediction is ready, it sends the LED data via OSC to 'Ortlicht'
     """
-    #global was_talking
-    sock=socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     pause_event.wait()
     while True:
         while len(prediction_buffer) > 0:
             if len(prediction_buffer) < 2:
                 #the last values for the LEDs should be black / 0
-                prediction_output = prediction_buffer.popleft()
-                prediction_output=np.multiply(prediction_output,0)
-                prediction_output=prediction_output.astype(np.uint8)
+                prediction_output = prediction_buffer.popleft()[0]
+                prediction_output = np.multiply(prediction_output,0)
+                prediction_output = prediction_output.astype(np.uint8)
             else:
-                prediction_output = prediction_buffer.popleft()
-                prediction_output=np.multiply(prediction_output,255)
-                prediction_output=prediction_output.astype(np.uint8)
+                prediction_output = prediction_buffer.popleft()[0]
+                prediction_output = np.multiply(prediction_output,255)
+                prediction_output = prediction_output.astype(np.uint8)
             for x in range(10):
-                ledValues=prediction_output[(x*1402):((x+1)*1402):1]
-                header=struct.pack('!IBB',frame_count,x,0)
-                message=header+bytes(ledValues.tolist())
+                ledValues = prediction_output[(x*1402):((x+1)*1402):1]
+                header = struct.pack('!IBB',frame_count,x,0)
+                message = header+bytes(ledValues.tolist())
                 sock.sendto(message, (UDP_IP, UDP_PORT))
             print("Play Frame", len(prediction_buffer))
             #was_talking = True
@@ -98,6 +97,19 @@ def ledoutput():
         pause_event.clear()
         pause_event.wait()
 
+def prediction_buffer_remove_pause():
+    """
+    Removes silent pause frames at the end of
+    prediction_buffer
+    """
+    global prediction_counter
+    prediction_buffer_right_end_counter = prediction_buffer[-1][1]
+    message_end_prediction_counter = prediction_counter - (PAUSE_LENGTH - 1)
+    while prediction_buffer_right_end_counter >= message_end_prediction_counter:
+        prediction_buffer.pop()
+        prediction_buffer_right_end_counter = prediction_buffer[-1][1]
+    prediction_counter = 0
+
 def contains_silence(fft_frame):
     """
     Returns true if sum(fft_data) > PAUSE_SILENCE_THRESH
@@ -106,10 +118,7 @@ def contains_silence(fft_frame):
     timestamp = spectrum_analyzer.last_frame_timestamp
     fft_sum = math.fsum(fft_frame)
     print("fft_sum: ", fft_sum)
-    #spectrum_analyzer.log_fft(timestamp, fft_data[0])
-    #spectrum_analyzer.log_entry(timestamp, {"sum": fft_sum})
     return fft_sum < PAUSE_SILENCE_THRESH
-
 
 def contains_silence_pause_detected(fft_frame):
     """
@@ -165,19 +174,22 @@ class Recording(State):
     to transition to replay state
     """
     def run(self, fft_frame):
+        global prediction_counter
         frame = [fft_frame]
         prediction_input = np.asarray(frame)
         prediction_input.shape = (1, neuralnet_audio.INPUT_DIM)
         prediction_output = neuralnet_audio.model.predict(prediction_input)
         prediction_output = prediction_output.flatten()
-        random_value = random.randint(MIN_FRAME_REPLAYS,MAX_FRAME_REPLAYS)
+        random_value = random.randint(MIN_FRAME_REPLAYS, MAX_FRAME_REPLAYS)
+        prediction_counter += 1
         for i in range(random_value):
-            prediction_buffer.append(prediction_output)
+            prediction_buffer.append((prediction_output, prediction_counter))
         print("buffer", len(prediction_buffer))
     def next(self, fft_frame):
         _frame_contains_silence, pause_detected = contains_silence_pause_detected(fft_frame)
         if pause_detected:
             print("Transitioned: Replaying")
+            prediction_buffer_remove_pause()
             return InterspaceStateMachine.replaying
         else:
             return InterspaceStateMachine.recording
@@ -215,6 +227,7 @@ replay_finished_event = threading.Event()
 fft = []
 prediction_buffer = deque(maxlen=PREDICTION_BUFFER_MAXLEN)
 frame_count = 0
+prediction_counter = 0
 
 InterspaceStateMachine.waiting = Waiting()
 InterspaceStateMachine.recording = Recording()
