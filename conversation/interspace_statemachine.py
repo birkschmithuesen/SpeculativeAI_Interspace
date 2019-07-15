@@ -99,16 +99,12 @@ def ledoutput():
 
 def prediction_buffer_remove_pause():
     """
-    Removes silent pause frames at the end of
+    Removes dark pause frames at the end of
     prediction_buffer
     """
-    global prediction_counter
-    prediction_buffer_right_end_counter = prediction_buffer[-1][1]
-    message_end_prediction_counter = prediction_counter - (PAUSE_LENGTH - 1)
-    while prediction_buffer_right_end_counter >= message_end_prediction_counter:
+    last_frame_counter = prediction_counter - (PAUSE_LENGTH - 1)
+    while(prediction_buffer[-1][1] >= last_frame_counter):
         prediction_buffer.pop()
-        prediction_buffer_right_end_counter = prediction_buffer[-1][1]
-    prediction_counter = 0
 
 def contains_silence(fft_frame):
     """
