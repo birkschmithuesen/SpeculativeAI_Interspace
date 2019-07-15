@@ -26,6 +26,8 @@ import numpy as np
 from . import fft
 from . import neuralnet_audio
 
+LIVE_REPLAY = False # replay the predictions live without buffer
+
 UDP_IP = '127.0.0.1'
 UDP_PORT = 10005
 OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
@@ -103,7 +105,7 @@ def prediction_buffer_remove_pause():
     prediction_buffer
     """
     last_frame_counter = prediction_counter - (PAUSE_LENGTH - 1)
-    while(prediction_buffer[-1][1] >= last_frame_counter):
+    while(prediction_buffer[-1][1] > last_frame_counter):
         prediction_buffer.pop()
 
 def contains_silence(fft_frame):
@@ -228,3 +230,11 @@ prediction_counter = 0
 InterspaceStateMachine.waiting = Waiting()
 InterspaceStateMachine.recording = Recording()
 InterspaceStateMachine.replaying = Replaying()
+
+if LIVE_REPLAY:
+    def new_next_recording(fft_frame):
+        return InterspaceStateMachine.replaying
+    def new_next_replaying(fft_frame):
+        return InterspaceStateMachine.recording
+    InterspaceStateMachine.recording.next = new_next_recording
+    InterspaceStateMachine.replaying.next = new_next_replaying
