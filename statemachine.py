@@ -3,14 +3,12 @@ This class contains a state machine model implementing
 the Interspace side of message receiving, processing and
 sending. It listens to audio makes a dftt transform and makes predictions
 utilizing a neural net to visualize on the object Interspace.
+
 The computation process is structured in the following way:
-0. trainingsdata + model: loading the trainingsdata from a textfile. Convert the
-    trainingpoints in the right dimension: One line in the text file is one trainingpoint
-    with 30 FFT values and 13824 LED values, separated by tabulators
-1. when receiving the the OSC command "/train" the function train_handler executes model.fit
+1. when receiving the the OSC command "/train" the function neuralnet_audio.train_handler executes model.fit
 2. input: receive audio
-3. FFT analysis: separate continues audio stream into 30 frequency bands with a frequency of 30fps
-4. prediction: convert the FFT analyses results to feed into a neural network.
+3. FFT analysis: separate continues audio stream into 30 frequency bands with a frequency of 44fps
+4. prediction: convert the FFT analysis results to feed into a neural network.
     Predict predict the brightness values of the 13824 Leds of the Interspace object
 """
 
@@ -24,24 +22,9 @@ import time
 from collections import deque
 from pythonosc import udp_client
 from pythonosc import osc_server
-import os
-import tensorflow as tf
-import keras
-from keras.models import Sequential
-from keras.utils import plot_model
-from keras.utils.vis_utils import model_to_dot
-from keras.layers import Dense, LSTM, Dropout, Activation
-from keras.optimizers import SGD
-from keras.models import model_from_json
-from keras.models import load_model
-from keras import backend as kerasBackend
-from numpy import loadtxt
 import numpy as np
 from fft import SpectrumAnalyzer, FPS
-
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the computed
-LOAD_MODEL = True
-SAVE_MODEL = False
+import neuralnet_audio
 
 UDP_IP = '127.0.0.1'
 UDP_PORT = 10005
@@ -54,94 +37,12 @@ MIN_FRAME_REPLAYS = 1 # set the minimum times, how often a frame will be written
 MAX_FRAME_REPLAYS = 1 # set the maximum times, how often a frame will be written into the buffer
 PREDICTION_BUFFER_MAXLEN = 441 # 10 seconds * 44.1 fps
 
-INPUT_DIM = 128
-BATCH_SIZE = 32
-EPOCHS = 30
-INITIAL_EPOCHS = 150
-
-HIDDEN1_DIM = 512
-HIDDEN2_DIM = 4096
-OUTPUT_DIM = 13824
-
-model = Sequential()
-
 def fft_callback_function(fft_data):
     """
     this function is called when fft values are received via OSC (from ableton Live)
     """
     fft.append(list(fft_data))
     frame_received_semaphore.release()
-
-def newModel_handler(unused_addr, args):
-    """
-    this function should reinitialize the model, to start the training from scratch again.
-    ToDo: make it work. Probably the crash is caused because of the multi-threading?
-    """
-    kerasBackend.clear_session()
-    my_init = keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
-
-    model.add(Dense(6144, activation='sigmoid', input_dim=30, kernel_initializer=my_init,
-                    bias_initializer=my_init))
-    model.add(Dense(OUTPUT_DIM, activation='sigmoid',kernel_initializer=my_init,
-                    bias_initializer=my_init))
-    sgd = SGD(lr=0.06, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
-    model.fit(training_input, training_output, epochs=1, batch_size=32, shuffle=True)
-    model._make_predict_function()
-    print('Loaded new model')
-
-"""
-Initialize NeuralNetwork.
-"""
-
-if LOAD_MODEL:
-    model = load_model('model.h5')
-    model._make_predict_function()
-    print('Loaded saved model from file')
-else:
-    #import fft and led input data
-    file_name = 'traingsdata.txt'
-    file = open(file_name)
-    print('Loading Trainingsdata from File:', file_name,'  ...')
-    values = loadtxt(file_name, dtype='float32')
-    print('Trainingsdata points: ',values.shape[0])
-    print()
-
-    #split into input and outputs
-    training_input, training_output = values[:,:-OUTPUT_DIM], values[:,INPUT_DIM:]
-    print('training_input shape: ', training_input.shape, 'training_output shape: ', training_output.shape)
-    my_init = keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
-    model.add(Dense(HIDDEN1_DIM, activation='sigmoid', input_dim=INPUT_DIM, kernel_initializer=my_init, bias_initializer=my_init))
-    model.add(Dense(HIDDEN2_DIM, activation='sigmoid', input_dim=HIDDEN1_DIM, kernel_initializer=my_init, bias_initializer=my_init))
-    model.add(Dense(OUTPUT_DIM, activation='sigmoid',kernel_initializer=my_init, bias_initializer=my_init))
-    sgd = SGD(lr=0.06, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
-    model.fit(training_input, training_output, epochs=INITIAL_EPOCHS, batch_size=32, shuffle=True)
-    model._make_predict_function()
-    model.summary()
-    print('Loaded new model')
-
-if SAVE_MODEL:
-    model.save('model.h5')
-    print('Saved new model 2 disk')
-    model.summary()
-
-def train_handler(unused_addr, args):
-    """
-    neural network trainer
-    """
-    model.fit(training_input, training_output, epochs=EPOCHS, batch_size=BATCH_SIZE, shuffle=True)
-    model._make_predict_function()
-    print('training finished...')
-    print('')
-
-def frame_count_handler(unused_addr, args):
-    """
-    a function to synchronize for recording the output of the neural network
-    """
-    #print('received frameCoount: ', args)
-    global frame_count
-    frame_count = args
 
 def initialize_server():
     """
@@ -153,9 +54,9 @@ def initialize_server():
     parser.add_argument("--port", type=int, default=OSC_LISTEN_PORT, help="The port to listen on")
     args = parser.parse_args()
     dispatcher = dispatcher.Dispatcher()
-    dispatcher.map("/Playback/Recorder/frameCount", frame_count_handler)
-    dispatcher.map("/train", train_handler)
-    dispatcher.map("/newModel", newModel_handler)
+    dispatcher.map("/Playback/Recorder/frameCount", neuralnet_audio.frame_count_handler)
+    dispatcher.map("/train", neuralnet_audio.train_handler)
+    dispatcher.map("/newModel", neuralnet_audio.new_model_handler)
     try:
         server = osc_server.ThreadingOSCUDPServer((args.ip, args.port), dispatcher)
         server_thread=threading.Thread(target=server.serve_forever, daemon=True)
@@ -266,8 +167,8 @@ class Recording(State):
     def run(self, fft_frame):
         frame = [fft_frame]
         prediction_input = np.asarray(frame)
-        prediction_input.shape = (1, INPUT_DIM)
-        prediction_output = model.predict(prediction_input)
+        prediction_input.shape = (1, neuralnet_audio.INPUT_DIM)
+        prediction_output = neuralnet_audio.model.predict(prediction_input)
         prediction_output = prediction_output.flatten()
         random_value = random.randint(MIN_FRAME_REPLAYS,MAX_FRAME_REPLAYS)
         for i in range(random_value):
@@ -304,6 +205,7 @@ class InterspaceStateMachine(StateMachine):
         self.t1.start()
         print("Initialized: Waiting")
         initialize_server()
+        neuralnet_audio.run()
 
 spectrum_analyzer = SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
 pause_counter = 0
