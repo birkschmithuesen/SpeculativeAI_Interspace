@@ -17,14 +17,10 @@ def createBins():
     creates the BIN Array for the FFT. The function creates bigger intervals for higher frequencies
     """
     theBins = []
-    startFreq = 30
-    for a in range(64):
-        endFreq = startFreq+21.5
-        theRange = (startFreq, endFreq)
-        startFreq = endFreq
-        theBins.append(theRange)
-    for a in range(64):
-        endFreq = startFreq+(6*(a+4))
+    startFreq = 20
+    stepFactor = 1.5
+    for a in range(128):
+        endFreq = startFreq+((a+15)*stepFactor)
         theRange = (startFreq, endFreq)
         startFreq = endFreq
         theBins.append(theRange)

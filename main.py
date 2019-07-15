@@ -6,16 +6,15 @@ to run in the main thread and pyplot currently being slow.
 """
 import sys
 import threading
-import statemachine
-from statemachine import InterspaceStateMachine
+from conversation import statemachine
 
 if __name__ == "__main__":
-    state_machine = InterspaceStateMachine()
+    state_machine = statemachine.InterspaceStateMachine()
 
     def state_machine_loop():
         while True:
             statemachine.frame_received_semaphore.acquire()
-            fft_frame = statemachine.fft.pop()
+            fft_frame = statemachine.fft_buffer.pop()
             state_machine.run(fft_frame)
 
     t2 = threading.Thread(name='state_machine_loop', target=state_machine_loop, daemon=True)

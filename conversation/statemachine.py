@@ -23,8 +23,8 @@ from collections import deque
 from pythonosc import udp_client
 from pythonosc import osc_server
 import numpy as np
-from fft import SpectrumAnalyzer, FPS
-import neuralnet_audio
+from . import fft
+from . import neuralnet_audio
 
 UDP_IP = '127.0.0.1'
 UDP_PORT = 10005
@@ -41,7 +41,7 @@ def fft_callback_function(fft_data):
     """
     this function is called when fft values are received via OSC (from ableton Live)
     """
-    fft.append(list(fft_data))
+    fft_buffer.append(list(fft_data))
     frame_received_semaphore.release()
 
 def initialize_server():
@@ -91,7 +91,7 @@ def ledoutput():
                 sock.sendto(message, (UDP_IP, UDP_PORT))
             print("Play Frame", len(prediction_buffer))
             #was_talking = True
-            time.sleep(1/FPS) #ensure playback speed matches framerate
+            time.sleep(1/fft.FPS) #ensure playback speed matches framerate
         #wait till the next frame package is ready
         replay_finished_event.set()
         pause_event.clear()
@@ -219,12 +219,12 @@ class InterspaceStateMachine(StateMachine):
         initialize_server()
         neuralnet_audio.run()
 
-spectrum_analyzer = SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
+spectrum_analyzer = fft.SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
 pause_counter = 0
 frame_received_semaphore = threading.Semaphore(0)
 pause_event = threading.Event()
 replay_finished_event = threading.Event()
-fft = []
+fft_buffer = []
 prediction_buffer = deque(maxlen=PREDICTION_BUFFER_MAXLEN)
 frame_count = 0
 prediction_counter = 0
