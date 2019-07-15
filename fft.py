@@ -136,7 +136,6 @@ class SpectrumAnalyzer:
         except KeyboardInterrupt:
             self.quit()
             print("\nProgram stopped...")
-            sys.exit(0)
 
     def fft(self):
         """
@@ -156,6 +155,7 @@ class SpectrumAnalyzer:
         """
         self.fft()
         self.fft_bins_y = self.binn_fft()
+
 
     def binn_fft(self):
         """
@@ -203,7 +203,7 @@ class SpectrumAnalyzer:
             plt.plot(self.fft_bins_x, self.fft_bins_y, marker='o', linestyle='-')
         else:
             plt.plot(self.spec_x, self.spec_y, marker='o', linestyle='-')
-        plt.pause(.02)
+        plt.pause(.01)
 
     def quit(self):
         """
@@ -215,13 +215,29 @@ class SpectrumAnalyzer:
             plt.close('all')
         if DEBUG:
             self.write_debug_log()
+        sys.exit(0)
 
     def log_fps(self, timestamp, fps):
         """
-        write given fps to log dict, if there's already an entry for
-        the timestamp, update it
+        log given fp
         """
         entry = {"fps": fps}
+        self.log_entry(timestamp, entry)
+
+    def log_fft(self, timestamp, fft):
+        """
+        log given fft list
+        """
+        entry = {}
+        for binval, i in zip(list(fft),range(30)):
+            name = "fft" + str(i)
+            entry.update({name: binval})
+        self.log_entry(timestamp, entry)
+
+    def log_entry(self, timestamp, entry):
+        """
+        log abitrary information contained in an dict.
+        """
         if timestamp in self.log:
             self.log[timestamp].update(entry)
         else:
@@ -230,6 +246,8 @@ class SpectrumAnalyzer:
     def write_debug_log(self):
         with open("debug_log.csv", mode="w") as csv_file:
             fieldnames = ["timestamp", "fps"]
+            fieldnames.extend(["fft" + str(i) for i in range(30)])
+            fieldnames.extend(["sum"])
             writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
             writer.writeheader()
             for key, val in self.log.items():
