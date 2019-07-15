@@ -9,18 +9,6 @@ import threading
 import statemachine
 from statemachine import InterspaceStateMachine
 
-# the ip and port to send the LED data to. The program Ortlicht receives them via OSC and
-# converts them to ArtNet
-statemachine.UDP_PORT = 10005
-statemachine.OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
-statemachine.OSC_LISTEN_PORT = 8000
-
-statemachine.PAUSE_LENGTH = 9 # length in frames of silence that triggers pause event
-statemachine.PAUSE_SILENCE_THRESH = 10 # Threshhold defining pause if sum(fft) is below the value
-statemachine.MIN_FRAME_REPLAYS = 1 # set the minimum times, how often a frame will be written into the buffer
-statemachine.MAX_FRAME_REPLAYS = 1 # set the maximum times, how often a frame will be written into the buffer
-statemachine.PREDICTION_BUFFER_MAXLEN = 441 # 10 seconds * 44.1 fps
-
 if __name__ == "__main__":
     state_machine = InterspaceStateMachine()
 
