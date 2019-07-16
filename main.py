@@ -42,8 +42,8 @@ UDP_PORT = 10005
 OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
 
-LOAD_MODEL = False
-SAVE_MODEL = True
+LOAD_MODEL = True
+SAVE_MODEL = False
 
 model = Sequential()
 
@@ -51,7 +51,7 @@ INPUT_DIM = 128
 NUM_SOUNDS = 1
 BATCH_SIZE = 32
 EPOCHS = 30
-INITIAL_EPOCHS = 1000
+INITIAL_EPOCHS = 5000
 
 HIDDEN1_DIM = 512
 HIDDEN2_DIM = 4096
@@ -147,6 +147,7 @@ def ledoutput():
         prediction_output=prediction_output.astype(np.uint8)
         for x in range(10):
           ledValues=prediction_output[(x*1402):((x+1)*1402):1]
+          ledValues = ledValues - 127;
           header=struct.pack('!IBB',frameCount,x,0)
           message=header+bytes(ledValues.tolist())
           sock.sendto(message, (UDP_IP, UDP_PORT))
