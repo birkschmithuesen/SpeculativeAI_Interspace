@@ -53,7 +53,7 @@ def train_model():
     file_name = MODEL_TRAININGS_DATA_FILE_PATH
     file = open(file_name)
     print('Loading Trainingsdata from File:', file_name,'  ...')
-    values = loadtxt(file_name, dtype='float32')
+    values = np.loadtxt(file_name, dtype='float32')
     print('Trainingsdata points: ', values.shape[0], "\n")
 
     #split into input and outputs
