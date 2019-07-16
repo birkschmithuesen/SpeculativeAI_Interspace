@@ -26,7 +26,7 @@ import numpy as np
 from . import fft
 from . import neuralnet_audio
 
-LIVE_REPLAY = False # replay the predictions live without buffer
+LIVE_REPLAY = True # replay the predictions live without buffer
 
 UDP_IP = '127.0.0.1'
 UDP_PORT = 10005
@@ -35,8 +35,8 @@ OSC_LISTEN_PORT = 8000
 
 PAUSE_LENGTH = 9 # length in frames of silence that triggers pause event
 PAUSE_SILENCE_THRESH = 10 # Threshhold defining pause if sum(fft) is below the value
-MIN_FRAME_REPLAYS = 1 # set the minimum times, how often a frame will be written into the buffer
-MAX_FRAME_REPLAYS = 1 # set the maximum times, how often a frame will be written into the buffer
+MESSAGE_RANDOMIZER_START = 1 # set the minimum times, how often a frame will be written into the buffer
+MESSAGE_RANDOMIZER_END = 1 # set the maximum times, how often a frame will be written into the buffer
 PREDICTION_BUFFER_MAXLEN = 441 # 10 seconds * 44.1 fps
 
 def fft_callback_function(fft_data):
@@ -178,8 +178,11 @@ class Recording(State):
         prediction_input.shape = (1, neuralnet_audio.INPUT_DIM)
         prediction_output = neuralnet_audio.model.predict(prediction_input)
         prediction_output = prediction_output.flatten()
-        random_value = random.randint(MIN_FRAME_REPLAYS, MAX_FRAME_REPLAYS)
         prediction_counter += 1
+        if LIVE_REPLAY:
+            random_value = 1
+        else:
+            random_value = random.randint(MESSAGE_RANDOMIZER_START, MESSAGE_RANDOMIZER_END)
         for i in range(random_value):
             prediction_buffer.append((prediction_output, prediction_counter))
         print("buffer", len(prediction_buffer))
@@ -235,6 +238,8 @@ if LIVE_REPLAY:
     def new_next_recording(fft_frame):
         return InterspaceStateMachine.replaying
     def new_next_replaying(fft_frame):
+        replay_finished_event.wait()
+        replay_finished_event.clear()
         return InterspaceStateMachine.recording
     InterspaceStateMachine.recording.next = new_next_recording
     InterspaceStateMachine.replaying.next = new_next_replaying
