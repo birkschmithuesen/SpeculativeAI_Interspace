@@ -35,6 +35,8 @@ import os
 from numpy import loadtxt
 from fft import SpectrumAnalyzer
 
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the computed
+
 # the ip and port to send the LED data to. The program Ortlicht receives them via OSC and
 # converts them to ArtNet
 UDP_IP = '127.0.0.1'
