@@ -79,6 +79,7 @@ def ledoutput():
     while True:
         while len(prediction_buffer) > 0:
             """ Quick & dirty to get the end of the message  black
+            """
             if len(prediction_buffer) < 2:
                 #the last values for the LEDs should be black / 0
                 prediction_output = prediction_buffer.popleft()[0]
@@ -88,9 +89,8 @@ def ledoutput():
                 prediction_output = prediction_buffer.popleft()[0]
                 prediction_output = np.multiply(prediction_output,255)
                 prediction_output = prediction_output.astype(np.uint8)
-            """
-            prediction_output = prediction_buffer.popleft()[0]
-            prediction_output = np.multiply(prediction_output,255)
+            #prediction_output = prediction_buffer.popleft()[0]
+            #prediction_output = np.multiply(prediction_output,255)
             prediction_output = prediction_output.astype(np.uint8)
             for x in range(10):
                 ledValues = prediction_output[(x*1402):((x+1)*1402):1]
