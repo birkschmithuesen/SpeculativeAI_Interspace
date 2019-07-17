@@ -74,7 +74,8 @@ def ledoutput():
     when a new prediction is ready, it sends the LED data via OSC to 'Ortlicht'
     """
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    pause_event.wait()
+    if not LIVE_REPLAY:
+        pause_event.wait()
     while True:
         while len(prediction_buffer) > 0:
             if len(prediction_buffer) < 2:
@@ -94,11 +95,13 @@ def ledoutput():
                 sock.sendto(message, (UDP_IP, UDP_PORT))
             print("Play Frame", len(prediction_buffer))
             #was_talking = True
-            time.sleep(1/fft.FPS) #ensure playback speed matches framerate
+            if not LIVE_REPLAY:
+                time.sleep(1/fft.FPS) #ensure playback speed matches framerate
         #wait till the next frame package is ready
-        replay_finished_event.set()
-        pause_event.clear()
-        pause_event.wait()
+        if not LIVE_REPLAY:
+            replay_finished_event.set()
+            pause_event.clear()
+            pause_event.wait()
 
 def prediction_buffer_remove_pause():
     """
@@ -237,10 +240,5 @@ InterspaceStateMachine.replaying = Replaying()
 
 if LIVE_REPLAY:
     def new_next_recording(fft_frame):
-        return InterspaceStateMachine.replaying
-    def new_next_replaying(fft_frame):
-        replay_finished_event.wait()
-        replay_finished_event.clear()
         return InterspaceStateMachine.recording
     InterspaceStateMachine.recording.next = new_next_recording
-    InterspaceStateMachine.replaying.next = new_next_replaying
