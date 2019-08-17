@@ -35,7 +35,7 @@ import os
 from numpy import loadtxt
 from fft import SpectrumAnalyzer
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the computed
+#os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the computed
 
 # the ip and port to send the LED data to. The program Ortlicht receives them via OSC and
 # converts them to ArtNet
@@ -44,8 +44,8 @@ UDP_PORT = 10005
 OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
 
-LOAD_MODEL = True
-SAVE_MODEL = False
+LOAD_MODEL = False
+SAVE_MODEL = True
 
 model = Sequential()
 
@@ -53,7 +53,7 @@ INPUT_DIM = 128
 NUM_SOUNDS = 1
 BATCH_SIZE = 32
 EPOCHS = 30
-INITIAL_EPOCHS = 5000
+INITIAL_EPOCHS = 300
 
 HIDDEN1_DIM = 512
 HIDDEN2_DIM = 4096
@@ -183,7 +183,7 @@ else:
     model.add(Dense(HIDDEN1_DIM, activation='sigmoid', input_dim=INPUT_DIM, kernel_initializer=my_init, bias_initializer=my_init))
     model.add(Dense(HIDDEN2_DIM, activation='sigmoid', input_dim=HIDDEN1_DIM, kernel_initializer=my_init, bias_initializer=my_init))
     model.add(Dense(OUTPUT_DIM, activation='sigmoid',kernel_initializer=my_init, bias_initializer=my_init))
-    sgd = SGD(lr=0.04, decay=1e-6, momentum=0.9, nesterov=True)
+    sgd = SGD(lr=2.5, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
     model.fit(training_input, training_output, epochs=INITIAL_EPOCHS, batch_size=32, shuffle=True)
     model._make_predict_function()
