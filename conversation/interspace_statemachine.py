@@ -26,7 +26,7 @@ import numpy as np
 from . import fft
 from . import neuralnet_audio
 
-LIVE_REPLAY = True # replay the predictions live without buffer
+LIVE_REPLAY = False # replay the predictions live without buffer
 
 UDP_IP = '127.0.0.1'
 UDP_PORT = 10005
