@@ -128,6 +128,7 @@ def ledoutput():
         prediction_output=prediction_output.astype(np.uint8)
         for x in range(10):
           ledValues=prediction_output[(x*1402):((x+1)*1402):1]
+          ledValues = ledValues - 127
           header=struct.pack('!IBB',frameCount,x,0)
           message=header+bytes(ledValues.tolist())
           sock.sendto(message, (UDP_IP, UDP_PORT))
