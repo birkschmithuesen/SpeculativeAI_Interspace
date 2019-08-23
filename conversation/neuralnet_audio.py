@@ -3,6 +3,7 @@ The class contains a neural net for predicting 13824 led
 brightness values from an 30 bin fft vector input.
 """
 import os
+from tensorflow import Session, ConfigProto
 import keras
 from keras.models import Sequential
 from keras.utils import plot_model
@@ -15,12 +16,12 @@ from keras import backend as kerasBackend
 import numpy as np
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the computed
-LOAD_MODEL = True
-SAVE_MODEL = False
 
 MODEL_FILE_PATH = './model.h5'
 MODEL_TRAININGS_DATA_FILE_PATH = 'traingsdata.txt'
-MODEL_SAVE_FILE_PATH = './model.h5'
+
+LOAD_MODEL = os.path.isfile(MODEL_FILE_PATH)
+SAVE_MODEL = not LOAD_MODEL
 
 INPUT_DIM = 128
 BATCH_SIZE = 32
@@ -31,6 +32,7 @@ HIDDEN1_DIM = 512
 HIDDEN2_DIM = 4096
 OUTPUT_DIM = 13824
 
+sess = Session(config=ConfigProto(log_device_placement=True))
 model = Sequential()
 
 def load_model_from_file():
@@ -117,8 +119,8 @@ def run():
     else:
         train_model()
     if SAVE_MODEL:
-        model.save(MODEL_SAVE_FILE_PATH)
-        print('Saved new model to path: ', MODEL_SAVE_FILE_PATH)
+        model.save(MODEL_FILE_PATH)
+        print('Saved new model to path: ', MODEL_FILE_PATH)
         model.summary()
 
 if __name__ == "__main__":
