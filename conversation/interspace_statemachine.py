@@ -36,7 +36,7 @@ OSC_LISTEN_PORT = 8000
 PAUSE_LENGTH_FOR_RANDOM_ACTIVATION = 300 # length in frames in waiting state triggering random activation
 MINIMUM_MESSAGE_LENGTH  = 5 # ignore all messages below this length
 PAUSE_LENGTH = 5 # length in frames of silence that triggers pause event
-PAUSE_SILENCE_THRESH = 100 # Threshhold defining pause if sum(fft) is below the value
+PAUSE_SILENCE_THRESH = 10 # Threshhold defining pause if sum(fft) is below the value
 MESSAGE_RANDOMIZER_START = 1 # set the minimum times, how often a frame will be written into the buffer
 MESSAGE_RANDOMIZER_END = 1 # set the maximum times, how often a frame will be written into the buffer
 VOLUME_RANDOMIZER_START = 0 # set the minimum value, how much the volume of the different synths will be changed by chance
@@ -246,8 +246,9 @@ class Recording(State):
                      break
         print("buffer", len(prediction_buffer))
     def next(self, fft_frame):
-        global prediction_counter
+        global prediction_counter, activation_counter
         _frame_contains_silence, pause_detected = contains_silence_pause_detected(fft_frame)
+        activation_counter += 1
         if pause_detected:
             if prediction_counter < MINIMUM_MESSAGE_LENGTH:
                  print("Transitioned: Waiting")
@@ -256,6 +257,7 @@ class Recording(State):
                  return InterspaceStateMachine.waiting
             print("Transitioned: Replaying")
             prediction_buffer_remove_pause()
+            activation_counter = 0
             return InterspaceStateMachine.replaying
         else:
             return InterspaceStateMachine.recording
