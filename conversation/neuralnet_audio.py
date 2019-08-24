@@ -15,7 +15,7 @@ from keras.models import load_model
 from keras import backend as kerasBackend
 import numpy as np
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the computed
+#os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the computed
 
 MODEL_FILE_PATH = './model.h5'
 MODEL_TRAININGS_DATA_FILE_PATH = 'traingsdata.txt'

@@ -34,14 +34,14 @@ OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
 
 PAUSE_LENGTH_FOR_RANDOM_ACTIVATION = 300 # length in frames in waiting state triggering random activation
-MINIMUM_MESSAGE_LENGTH  = 5 # ignore all messages below this length
-PAUSE_LENGTH = 5 # length in frames of silence that triggers pause event
+MINIMUM_MESSAGE_LENGTH  = 25 # ignore all messages below this length
+PAUSE_LENGTH = 40 # length in frames of silence that triggers pause event
 PAUSE_SILENCE_THRESH = 10 # Threshhold defining pause if sum(fft) is below the value
-MESSAGE_RANDOMIZER_START = 1 # set the minimum times, how often a frame will be written into the buffer
-MESSAGE_RANDOMIZER_END = 1 # set the maximum times, how often a frame will be written into the buffer
+MESSAGE_RANDOMIZER_START = 0 # set the minimum times, how often a frame will be written into the buffer
+MESSAGE_RANDOMIZER_END = 0 # set the maximum times, how often a frame will be written into the buffer
 VOLUME_RANDOMIZER_START = 0 # set the minimum value, how much the volume of the different synths will be changed by chance
-VOLUME_RANDOMIZER_END = 0.2 # set the maximum value, how much the volume of the different synths will be changed by chance
-PREDICTION_BUFFER_MAXLEN = 441 # 10 seconds * 44.1 fps
+VOLUME_RANDOMIZER_END = 0 # set the maximum value, how much the volume of the different synths will be changed by chance
+PREDICTION_BUFFER_MAXLEN = 4410 # 10 seconds * 44.1 fps
 
 def fft_callback_function(fft_data):
     """
@@ -84,6 +84,7 @@ def ledoutput():
         while len(prediction_buffer) > 0:
             """ Quick & dirty to get the end of the message  black
             """
+            time_start = time.time()
             if len(prediction_buffer) < 2:
                 #the last values for the LEDs should be black / 0
                 prediction_output = prediction_buffer.popleft()[0]
@@ -104,8 +105,11 @@ def ledoutput():
                 sock.sendto(message, (UDP_IP, UDP_PORT))
             print("Play Frame", len(prediction_buffer))
             #was_talking = True
+            time_delta = time.time() - time_start
             if not LIVE_REPLAY:
-                time.sleep(1/fft.FPS) #ensure playback speed matches framerate
+                sleep_time = (1/fft.FPS)-time_delta
+                if sleep_time  > 0:
+                    time.sleep(sleep_time) #ensure playback speed matches framerate
         #wait till the next frame package is ready
         if not LIVE_REPLAY:
             replay_finished_event.set()
@@ -226,7 +230,8 @@ class Recording(State):
         prediction_output = neuralnet_audio.model.predict(prediction_input)
         prediction_output = prediction_output.flatten()
         prediction_output = soundvector_postprocessing(prediction_output)
-        prediction_counter += 1
+        if len(prediction_buffer) < PREDICTION_BUFFER_MAXLEN:
+            prediction_counter += 1
         if LIVE_REPLAY:
             random_value = 1
         else:
@@ -254,12 +259,14 @@ class Recording(State):
         if pause_detected:
             if prediction_counter < MINIMUM_MESSAGE_LENGTH:
                  print("Transitioned: Waiting")
-                 prediction_counter = frames_to_remove = 0
                  prediction_buffer.clear()
+                 prediction_counter = frames_to_remove = 0
                  return InterspaceStateMachine.waiting
             print("Transitioned: Replaying")
             prediction_buffer_remove_pause()
-            activation_counter = 0
+            print(prediction_counter)
+            print(len(prediction_buffer))
+            prediction_counter = frames_to_remove = activation_counter = 0
             return InterspaceStateMachine.replaying
         else:
             return InterspaceStateMachine.recording
