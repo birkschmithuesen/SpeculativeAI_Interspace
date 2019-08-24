@@ -33,8 +33,10 @@ UDP_PORT = 10005
 OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
 
+PAUSE_LENGTH_FOR_RANDOM_ACTIVATION = 300 # length in frames in waiting state triggering random activation
+MINIMUM_MESSAGE_LENGTH  = 5 # ignore all messages below this length
 PAUSE_LENGTH = 5 # length in frames of silence that triggers pause event
-PAUSE_SILENCE_THRESH = 10 # Threshhold defining pause if sum(fft) is below the value
+PAUSE_SILENCE_THRESH = 100 # Threshhold defining pause if sum(fft) is below the value
 MESSAGE_RANDOMIZER_START = 1 # set the minimum times, how often a frame will be written into the buffer
 MESSAGE_RANDOMIZER_END = 1 # set the maximum times, how often a frame will be written into the buffer
 VOLUME_RANDOMIZER_START = 0 # set the minimum value, how much the volume of the different synths will be changed by chance
@@ -115,9 +117,16 @@ def prediction_buffer_remove_pause():
     Removes dark pause frames at the end of
     prediction_buffer
     """
+    global prediction_counter
+    # -1 because the last pause frame wrecordon't be recorded in state machine
     last_frame_counter = prediction_counter - (PAUSE_LENGTH - 1)
+    if len(prediction_buffer) == 0:
+        return
     while(prediction_buffer[-1][1] > last_frame_counter):
         prediction_buffer.pop()
+        prediction_counter -= 1
+        if len(prediction_buffer) == 0:
+           return
 
 def contains_silence(fft_frame):
     """
@@ -157,6 +166,15 @@ def soundvector_postprocessing(prediction_vector):
     prediction_vector[6] = prediction_vector[6] + random.uniform(VOLUME_RANDOMIZER_START, VOLUME_RANDOMIZER_END)
     return prediction_vector
 
+def add_activation_to_buffer():
+    """
+    adds random activation into the buffer
+    """
+    message_length = random.randint(30, 90)
+    for i in range(message_length):
+        message = [np.random.rand(neuralnet_audio.OUTPUT_DIM)]
+        prediction_buffer.append(message)
+
 class State:
     def run(self):
         assert 0, "run not implemented"
@@ -180,9 +198,16 @@ class Waiting(State):
     def run(self, input=None):
         pass
     def next(self, fft_frame):
+        global activation_counter
+        if activation_counter >= PAUSE_LENGTH_FOR_RANDOM_ACTIVATION:
+            add_activation_to_buffer()
+            activation_counter = 0
+            return InterspaceStateMachine.replaying
         frame_contains_silence, _pause_detected = contains_silence_pause_detected(fft_frame)
         if frame_contains_silence:
+            activation_counter += 1
             return InterspaceStateMachine.waiting
+        activation_counter = 0
         print("Transitioned: Recording")
         return InterspaceStateMachine.recording
 
@@ -192,7 +217,7 @@ class Recording(State):
     to transition to replay state
     """
     def run(self, fft_frame):
-        global prediction_counter
+        global prediction_counter, frames_to_remove
         frame = [fft_frame]
         prediction_input = np.asarray(frame)
         prediction_input.shape = (1, neuralnet_audio.INPUT_DIM)
@@ -203,13 +228,32 @@ class Recording(State):
         if LIVE_REPLAY:
             random_value = 1
         else:
-            random_value = random.randint(MESSAGE_RANDOMIZER_START, MESSAGE_RANDOMIZER_END)
-        for i in range(random_value):
-            prediction_buffer.append((prediction_output, prediction_counter))
+            random_value = random.randint(
+                MESSAGE_RANDOMIZER_START, MESSAGE_RANDOMIZER_END)
+            should_increase_length = random.randint(
+                0, 1)
+        prediction_buffer.append((prediction_output, prediction_counter))
+        if should_increase_length:
+            for i in range(random_value):
+                prediction_buffer.append((prediction_output, prediction_counter))
+        else:
+            frames_to_remove += random_value - 1
+        while(frames_to_remove > 0):
+                 if len(prediction_buffer) > MINIMUM_MESSAGE_LENGTH:
+                     prediction_buffer.pop()
+                     frames_to_remove -= 1
+                 else:
+                     break
         print("buffer", len(prediction_buffer))
     def next(self, fft_frame):
+        global prediction_counter
         _frame_contains_silence, pause_detected = contains_silence_pause_detected(fft_frame)
         if pause_detected:
+            if prediction_counter < MINIMUM_MESSAGE_LENGTH:
+                 print("Transitioned: Waiting")
+                 prediction_counter = frames_to_remove = 0
+                 prediction_buffer.clear()
+                 return InterspaceStateMachine.waiting
             print("Transitioned: Replaying")
             prediction_buffer_remove_pause()
             return InterspaceStateMachine.replaying
@@ -243,6 +287,7 @@ class InterspaceStateMachine(StateMachine):
 
 spectrum_analyzer = fft.SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
 pause_counter = 0
+activation_counter = 0
 frame_received_semaphore = threading.Semaphore(0)
 pause_event = threading.Event()
 replay_finished_event = threading.Event()
@@ -250,6 +295,7 @@ fft_buffer = []
 prediction_buffer = deque(maxlen=PREDICTION_BUFFER_MAXLEN)
 frame_count = 0
 prediction_counter = 0
+frames_to_remove = 0
 
 InterspaceStateMachine.waiting = Waiting()
 InterspaceStateMachine.recording = Recording()
