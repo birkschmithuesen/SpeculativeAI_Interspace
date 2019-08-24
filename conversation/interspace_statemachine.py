@@ -172,7 +172,7 @@ def add_activation_to_buffer():
     """
     message_length = random.randint(30, 90)
     for i in range(message_length):
-        factor = random.randint(0,100)
+        factor = random.randint(0,70)
         factor = factor/100.0
         message = [np.random.rand(neuralnet_audio.OUTPUT_DIM) * factor]
         prediction_buffer.append(message)
