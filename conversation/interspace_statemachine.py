@@ -23,8 +23,7 @@ from collections import deque
 from pythonosc import udp_client
 from pythonosc import osc_server
 import numpy as np
-from . import fft
-from . import neuralnet_audio
+from conversation import fft, neuralnet_audio, interspace_artnet
 
 LIVE_REPLAY = False # replay the predictions live without buffer
 
@@ -77,40 +76,14 @@ def ledoutput():
     runs parallel in a single thread
     when a new prediction is ready, it sends the LED data via OSC to 'Ortlicht'
     """
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     if not LIVE_REPLAY:
         pause_event.wait()
     while True:
-        while len(prediction_buffer) > 0:
-            """ Quick & dirty to get the end of the message  black
-            """
-            time_start = time.time()
-            if len(prediction_buffer) < 2:
-                #the last values for the LEDs should be black / 0
-                prediction_output = prediction_buffer.popleft()[0]
-                prediction_output = np.multiply(prediction_output,0)
-                prediction_output = prediction_output.astype(np.uint8)
-            else:
-                prediction_output = prediction_buffer.popleft()[0]
-                prediction_output = np.multiply(prediction_output,255)
-                prediction_output = prediction_output.astype(np.uint8)
-            #prediction_output = prediction_buffer.popleft()[0]
-            #prediction_output = np.multiply(prediction_output,255)
-            prediction_output = prediction_output.astype(np.uint8)
-            for x in range(10):
-                ledValues = prediction_output[(x*1402):((x+1)*1402):1]
-                ledValues = ledValues - 127;
-                header = struct.pack('!IBB',frame_count,x,0)
-                message = header+bytes(ledValues.tolist())
-                sock.sendto(message, (UDP_IP, UDP_PORT))
-            print("Play Frame", len(prediction_buffer))
-            #was_talking = True
-            time_delta = time.time() - time_start
-            if not LIVE_REPLAY:
-                sleep_time = (1/fft.FPS)-time_delta
-                if sleep_time  > 0:
-                    time.sleep(sleep_time) #ensure playback speed matches framerate
-        #wait till the next frame package is ready
+        artnet_sender.send_buffer(prediction_buffer)
+        if not LIVE_REPLAY:
+            sleep_time = 1.0/fft.FPS
+            time.sleep(sleep_time) #ensure playback speed matches framerate
+        prediction_buffer.clear()
         if not LIVE_REPLAY:
             replay_finished_event.set()
             pause_event.clear()
@@ -297,6 +270,7 @@ class InterspaceStateMachine(StateMachine):
         neuralnet_audio.run()
 
 spectrum_analyzer = fft.SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
+artnet_sender = interspace_artnet.InterspaceArtnet()
 pause_counter = 0
 activation_counter = 0
 frame_received_semaphore = threading.Semaphore(0)
