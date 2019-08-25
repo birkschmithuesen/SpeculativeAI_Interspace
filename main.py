@@ -19,11 +19,10 @@ if __name__ == "__main__":
 
     t2 = threading.Thread(name='state_machine_loop', target=state_machine_loop, daemon=True)
     t2.start()
-""""
+
     while True:
         try:
             interspace_statemachine.spectrum_analyzer.tick()
         except KeyboardInterrupt:
             interspace_statemachine.spectrum_analyzer.quit()
             sys.exit(0)
-"""
