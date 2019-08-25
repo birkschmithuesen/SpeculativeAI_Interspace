@@ -336,16 +336,19 @@ class InterspaceArtnet:
             packet[i] = 170
         for net in self.artnet_objects:
             net.set(packet)
-        for net in self.artnet_objects:
-            net.show()
+        self.show()
     def all_off(self):
         for net in self.artnet_objects:
             net.blackout()
-    def send_buffer(led_brighness_buffer):
+    def send_buffer(self, led_brightness_buffer):
         universe = 0
         for net in self.artnet_objects:
             net.set(led_brightness_buffer[universe*170:(universe+1)*170])
             universe += 1
+        self.show()
+    def show(self):
+        for net in self.artnet_objects:
+            net.show()
 
 if __name__ == "__main__":
     inter = InterspaceArtnet()
