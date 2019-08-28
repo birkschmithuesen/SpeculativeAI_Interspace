@@ -342,8 +342,9 @@ class InterspaceArtnet:
             net.blackout()
     def send_buffer(self, led_brightness_buffer):
         universe = 0
+        buffer = list(led_brightness_buffer)
         for net in self.artnet_objects:
-            net.set(led_brightness_buffer[universe*170:(universe+1)*170])
+            net.set(buffer[universe*170:(universe+1)*170])
             universe += 1
         self.show()
     def show(self):
