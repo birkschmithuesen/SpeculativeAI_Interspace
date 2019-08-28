@@ -38,8 +38,8 @@ MINIMUM_MESSAGE_LENGTH  = 25 # ignore all messages below this length
 PAUSE_LENGTH = 40 # length in frames of silence that triggers pause event
 PAUSE_SILENCE_THRESH = 10 # Threshhold defining pause if sum(fft) is below the value
 MESSAGE_RANDOMIZER_START = 0 # set the minimum times, how often a frame will be written into the buffer
-MESSAGE_RANDOMIZER_END = 10 # set the maximum times, how often a frame will be written into the buffer
-PREDICTION_BUFFER_MAXLEN = 4410 # 10 seconds * 44.1 fps
+MESSAGE_RANDOMIZER_END = 3 # set the maximum times, how often a frame will be written into the buffer
+PREDICTION_BUFFER_MAXLEN = 192 # 3 seconds * 44.1 fps
 
 def fft_callback_function(fft_data):
     """
