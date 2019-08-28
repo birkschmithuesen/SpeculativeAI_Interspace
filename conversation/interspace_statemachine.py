@@ -38,9 +38,7 @@ MINIMUM_MESSAGE_LENGTH  = 25 # ignore all messages below this length
 PAUSE_LENGTH = 40 # length in frames of silence that triggers pause event
 PAUSE_SILENCE_THRESH = 10 # Threshhold defining pause if sum(fft) is below the value
 MESSAGE_RANDOMIZER_START = 0 # set the minimum times, how often a frame will be written into the buffer
-MESSAGE_RANDOMIZER_END = 0 # set the maximum times, how often a frame will be written into the buffer
-VOLUME_RANDOMIZER_START = 0 # set the minimum value, how much the volume of the different synths will be changed by chance
-VOLUME_RANDOMIZER_END = 0 # set the maximum value, how much the volume of the different synths will be changed by chance
+MESSAGE_RANDOMIZER_END = 10 # set the maximum times, how often a frame will be written into the buffer
 PREDICTION_BUFFER_MAXLEN = 4410 # 10 seconds * 44.1 fps
 
 def fft_callback_function(fft_data):
@@ -161,15 +159,6 @@ def contains_silence_pause_detected(fft_frame):
         pause_counter = 0
     return frame_contains_silence, False
 
-def soundvector_postprocessing(prediction_vector):
-    """
-    adds some random noise or any other function to the sound vector,
-    to add purpose to the answer
-    """
-    prediction_vector[0] = prediction_vector[0] + random.uniform(VOLUME_RANDOMIZER_START, VOLUME_RANDOMIZER_END)
-    prediction_vector[6] = prediction_vector[6] + random.uniform(VOLUME_RANDOMIZER_START, VOLUME_RANDOMIZER_END)
-    return prediction_vector
-
 def add_activation_to_buffer():
     """
     adds random activation into the buffer
@@ -229,7 +218,6 @@ class Recording(State):
         prediction_input.shape = (1, neuralnet_audio.INPUT_DIM)
         prediction_output = neuralnet_audio.model.predict(prediction_input)
         prediction_output = prediction_output.flatten()
-        prediction_output = soundvector_postprocessing(prediction_output)
         if len(prediction_buffer) < PREDICTION_BUFFER_MAXLEN:
             prediction_counter += 1
         if LIVE_REPLAY:
