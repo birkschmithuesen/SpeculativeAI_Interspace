@@ -79,7 +79,7 @@ def ledoutput():
     if not LIVE_REPLAY:
         pause_event.wait()
     while True:
-        artnet_sender.send_buffer(prediction_buffer)
+        artnet_sender.send_buffer([x[0] for x in prediction_buffer])
         if not LIVE_REPLAY:
             sleep_time = 1.0/fft.FPS
             time.sleep(sleep_time) #ensure playback speed matches framerate
