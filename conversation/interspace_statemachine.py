@@ -33,13 +33,14 @@ UDP_PORT = 10005
 OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
 
-PAUSE_LENGTH_FOR_RANDOM_ACTIVATION = 300 # length in frames in waiting state triggering random activation
+PAUSE_LENGTH_FOR_RANDOM_ACTIVATION = 550 # length in frames in waiting state triggering random activation
 MINIMUM_MESSAGE_LENGTH  = 25 # ignore all messages below this length
 PAUSE_LENGTH = 40 # length in frames of silence that triggers pause event
 PAUSE_SILENCE_THRESH = 10 # Threshhold defining pause if sum(fft) is below the value
 MESSAGE_RANDOMIZER_START = 0 # set the minimum times, how often a frame will be written into the buffer
-MESSAGE_RANDOMIZER_END = 3 # set the maximum times, how often a frame will be written into the buffer
-PREDICTION_BUFFER_MAXLEN = 192 # 3 seconds * 44.1 fps
+MESSAGE_RANDOMIZER_END = 1 # set the maximum times, how often a frame will be written into the buffer
+PREDICTION_BUFFER_MAXLEN = 440 # 3 seconds * 44.1 fps
+UPDATE_FACTOR = 0.1 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
 
 def fft_callback_function(fft_data):
     """
@@ -212,8 +213,10 @@ class Recording(State):
     to transition to replay state
     """
     def run(self, fft_frame):
-        global prediction_counter, frames_to_remove
-        frame = [fft_frame]
+        global prediction_counter, frames_to_remove, last_frame
+        #frame = 0.7 * [fft_frame] + 0.3 * frame
+        frame = np.array([fft_frame]) * UPDATE_FACTOR + last_frame * (1 - UPDATE_FACTOR) #quick & dirty "sliding wwindow solution"
+        last_frame = frame
         prediction_input = np.asarray(frame)
         prediction_input.shape = (1, neuralnet_audio.INPUT_DIM)
         prediction_output = neuralnet_audio.model.predict(prediction_input)
@@ -295,6 +298,7 @@ prediction_buffer = deque(maxlen=PREDICTION_BUFFER_MAXLEN)
 frame_count = 0
 prediction_counter = 0
 frames_to_remove = 0
+last_frame = 0
 
 InterspaceStateMachine.waiting = Waiting()
 InterspaceStateMachine.recording = Recording()
