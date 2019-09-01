@@ -233,16 +233,19 @@ class Recording(State):
         prediction_buffer.append((prediction_output, prediction_counter))
         if should_increase_length:
             for i in range(random_value):
+                print("increase")
                 prediction_buffer.append((prediction_output, prediction_counter))
         else:
-            frames_to_remove += random_value - 1
+            frames_to_remove += random_value
         while(frames_to_remove > 0):
+                 print("removed")
                  if len(prediction_buffer) > MINIMUM_MESSAGE_LENGTH:
                      prediction_buffer.pop()
                      frames_to_remove -= 1
                  else:
                      break
         print("buffer", len(prediction_buffer))
+        print("prediction_counter", prediction_counter)
     def next(self, fft_frame):
         global prediction_counter, activation_counter
         _frame_contains_silence, pause_detected = contains_silence_pause_detected(fft_frame)
