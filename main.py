@@ -44,6 +44,7 @@ UDP_PORT = 10005
 OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
 
+#####UNcLEAR - has to be corrected
 LOAD_MODEL = False # set False if you ant to load a model and continue to train it
 SAVE_MODEL = True
 LOAD_TRAININGSDATA = True
@@ -55,7 +56,7 @@ INPUT_DIM = 128
 NUM_SOUNDS = 1
 BATCH_SIZE = 32
 EPOCHS = 30
-INITIAL_EPOCHS = 30
+INITIAL_EPOCHS = 400
 
 HIDDEN1_DIM = 512
 HIDDEN2_DIM = 4096
@@ -189,7 +190,7 @@ else:
     else:
         model=load_model('model.h5')
         print('Loaded saved model from file')
-    sgd = SGD(lr=2, decay=1e-6, momentum=0.9, nesterov=True)
+    sgd = SGD(lr=1.2, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
     model.fit(training_input, training_output, epochs=INITIAL_EPOCHS, batch_size=32, shuffle=True)
     model._make_predict_function()
