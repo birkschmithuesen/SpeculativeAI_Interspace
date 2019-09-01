@@ -33,6 +33,8 @@ def createBins():
 DEBUG = False
 SHOW_GRAPH = True
 FPS = 44.1
+UPDATE_FACTOR = 0.2 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
+
 
 OSC_IP = "127.0.0.1"
 OSC_PORT = 8001
@@ -46,6 +48,8 @@ N = CHUNK
 WINDOW = np.hanning(N)
 BINS = createBins() #[(a, a+198) for a in range(30, 6000, 199)]
 #BINS = [(a, a+82) for a in range(20, 10020, 83)]
+
+last_fft_bins_y = 0
 
 if SHOW_GRAPH:
     import matplotlib.pyplot as plt
@@ -124,10 +128,13 @@ class SpectrumAnalyzer:
         return (None, pyaudio.paContinue)
 
     def send_fft_osc(self):
+        global last_fft_bins_y
         """
         send the computed fft results via OSC to the set IP and port
         """
-        self.client.send_message("/fft_train", list(self.fft_bins_y))
+        fft_bins_with_time = np.asarray(self.fft_bins_y) * UPDATE_FACTOR + last_fft_bins_y * (1 - UPDATE_FACTOR)
+        last_fft_bins_y = fft_bins_with_time
+        self.client.send_message("/fft_train", list(fft_bins_with_time))
 
     def tick(self):
         """
