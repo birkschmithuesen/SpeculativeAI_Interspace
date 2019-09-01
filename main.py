@@ -44,10 +44,12 @@ UDP_PORT = 10005
 OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
 
-#####UNcLEAR - has to be corrected
-LOAD_MODEL = True # set False if you ant to load a model and continue to train it
-SAVE_MODEL = False
+LOAD_MODEL_WITHOUT_TRAINING = False # set False if you ant to load a model and continue to train it
+LOAD_MODEL_TO_CONTINUE_TRAINING = True
+SAVE_MODEL = True
 LOAD_TRAININGSDATA = True
+INITIALIZE_NEW_NETWORK = False
+DO_TRAINING = True
 UPDATE_FACTOR = 0.2 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
 
 
@@ -57,7 +59,7 @@ INPUT_DIM = 128
 NUM_SOUNDS = 1
 BATCH_SIZE = 32
 EPOCHS = 30
-INITIAL_EPOCHS = 400
+INITIAL_EPOCHS = 30
 
 HIDDEN1_DIM = 512
 HIDDEN2_DIM = 4096
@@ -168,32 +170,32 @@ initialize_server()
 Initialize NeuralNetwork.
 """
 
-if LOAD_MODEL:
+if LOAD_MODEL_WITHOUT_TRAINING:
     model=load_model('model.h5')
     model._make_predict_function()
     print('Loaded saved model from file')
-else:
-    if LOAD_TRAININGSDATA:
-        #import fft and led input data
-        file_name='traingsdata.txt'
-        file = open(file_name)
-        print('Loading Trainingsdata from File:', file_name,'  ...')
-        values=loadtxt(file_name, dtype='float32')
-        print('Trainingsdata points: ',values.shape[0])
-        print()
-        #split into input and outputs
-        training_input, training_output = values[:,:-13824], values[:,INPUT_DIM:]
-        print('training_input shape: ', training_input.shape, 'training_output shape: ', training_output.shape)
-
-        my_init=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
-        model.add(Dense(HIDDEN1_DIM, activation='sigmoid', input_dim=INPUT_DIM, kernel_initializer=my_init, bias_initializer=my_init))
-        model.add(Dense(HIDDEN2_DIM, activation='sigmoid', input_dim=HIDDEN1_DIM, kernel_initializer=my_init, bias_initializer=my_init))
-        model.add(Dense(OUTPUT_DIM, activation='sigmoid',kernel_initializer=my_init, bias_initializer=my_init))
-    else:
-        model=load_model('model.h5')
-        print('Loaded saved model from file')
+if LOAD_MODEL_TO_CONTINUE_TRAINING:
+    model=load_model('model.h5')
+    print('Loaded saved model from file')
+if LOAD_TRAININGSDATA:
+    #import fft and led input data
+    file_name='traingsdata.txt'
+    file = open(file_name)
+    print('Loading Trainingsdata from File:', file_name,'  ...')
+    values=loadtxt(file_name, dtype='float32')
+    print('Trainingsdata points: ',values.shape[0])
+    print()
+    #split into input and outputs
+    training_input, training_output = values[:,:-13824], values[:,INPUT_DIM:]
+    print('training_input shape: ', training_input.shape, 'training_output shape: ', training_output.shape)
+if INITIALIZE_NEW_NETWORK:
+    my_init=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
+    model.add(Dense(HIDDEN1_DIM, activation='sigmoid', input_dim=INPUT_DIM, kernel_initializer=my_init, bias_initializer=my_init))
+    model.add(Dense(HIDDEN2_DIM, activation='sigmoid', input_dim=HIDDEN1_DIM, kernel_initializer=my_init, bias_initializer=my_init))
+    model.add(Dense(OUTPUT_DIM, activation='sigmoid',kernel_initializer=my_init, bias_initializer=my_init))
     sgd = SGD(lr=1.2, decay=1e-6, momentum=0.9, nesterov=True)
     model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
+if DO_TRAINING:
     model.fit(training_input, training_output, epochs=INITIAL_EPOCHS, batch_size=32, shuffle=True)
     model._make_predict_function()
     model.summary()
