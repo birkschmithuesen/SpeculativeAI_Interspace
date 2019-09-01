@@ -34,8 +34,8 @@ OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
 
 PAUSE_LENGTH_FOR_RANDOM_ACTIVATION = 550 # length in frames in waiting state triggering random activation
-MINIMUM_MESSAGE_LENGTH  = 22 # ignore all messages below this length
 PAUSE_LENGTH = 40 # length in frames of silence that triggers pause event
+MINIMUM_MESSAGE_LENGTH  = 6 + PAUSE_LENGTH # ignore all messages below this length
 PAUSE_SILENCE_THRESH = 6 # Threshhold defining pause if sum(fft) is below the value
 MESSAGE_RANDOMIZER_START = 0 # set the minimum times, how often a frame will be written into the buffer
 MESSAGE_RANDOMIZER_END = 1 # set the maximum times, how often a frame will be written into the buffer
