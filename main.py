@@ -45,9 +45,10 @@ OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
 
 #####UNcLEAR - has to be corrected
-LOAD_MODEL = False # set False if you ant to load a model and continue to train it
-SAVE_MODEL = True
+LOAD_MODEL = True # set False if you ant to load a model and continue to train it
+SAVE_MODEL = False
 LOAD_TRAININGSDATA = True
+UPDATE_FACTOR = 0.2 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
 
 
 model = Sequential()
@@ -62,6 +63,7 @@ HIDDEN1_DIM = 512
 HIDDEN2_DIM = 4096
 OUTPUT_DIM = 13824
 
+last_prediction_input = 0
 
 
 fft=[]
@@ -215,10 +217,12 @@ t1.start()
 SPEC = SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
 
 def loop():
+    global last_prediction_input
     while 0<1:
         for i in range(NUM_SOUNDS):
             e1.acquire()
-        prediction_input=np.asarray([fft.pop() for x in range(NUM_SOUNDS)])
+        prediction_input=np.asarray([fft.pop() for x in range(NUM_SOUNDS)]) * UPDATE_FACTOR + last_prediction_input * (1 - UPDATE_FACTOR)
+        last_prediction_input = prediction_input
         #prediction_input = np.reshape=(prediction_input, (1,NUM_SOUNDS,INPUT_DIM))
         prediction_input.shape=(1,INPUT_DIM)
         prediction_output=model.predict(prediction_input)
