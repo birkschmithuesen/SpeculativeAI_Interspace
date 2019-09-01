@@ -213,7 +213,7 @@ class Recording(State):
     to transition to replay state
     """
     def run(self, fft_frame):
-        global prediction_counter, frames_to_remove, last_frame
+        global prediction_counter, frames_to_remove, last_frame, should_increase_length
         #frame = 0.7 * [fft_frame] + 0.3 * frame
         frame = np.array([fft_frame]) * UPDATE_FACTOR + last_frame * (1 - UPDATE_FACTOR) #quick & dirty "sliding wwindow solution"
         last_frame = frame
@@ -228,17 +228,16 @@ class Recording(State):
         else:
             random_value = random.randint(
                 MESSAGE_RANDOMIZER_START, MESSAGE_RANDOMIZER_END)
-            should_increase_length = random.randint(
-                0, 1)
+            should_increase_length = should_increase_length + random.uniform(-1, 1)
+            should_increase_length = np.clip(should_increase_length, -5, 5)
+        print("should increase length", should_increase_length)
         prediction_buffer.append((prediction_output, prediction_counter))
-        if should_increase_length:
+        if should_increase_length > 0:
             for i in range(random_value):
-                print("increase")
                 prediction_buffer.append((prediction_output, prediction_counter))
         else:
             frames_to_remove += random_value
         while(frames_to_remove > 0):
-                 print("removed")
                  if len(prediction_buffer) > MINIMUM_MESSAGE_LENGTH:
                      prediction_buffer.pop()
                      frames_to_remove -= 1
@@ -301,6 +300,7 @@ prediction_buffer = deque(maxlen=PREDICTION_BUFFER_MAXLEN)
 frame_count = 0
 prediction_counter = 0
 frames_to_remove = 0
+should_increase_length = 0
 last_frame = 0
 
 InterspaceStateMachine.waiting = Waiting()
