@@ -36,11 +36,12 @@ OSC_LISTEN_PORT = 8000
 PAUSE_LENGTH_FOR_RANDOM_ACTIVATION = 550 # length in frames in waiting state triggering random activation
 PAUSE_LENGTH = 40 # length in frames of silence that triggers pause event
 MINIMUM_MESSAGE_LENGTH  = 6 + PAUSE_LENGTH # ignore all messages below this length
-PAUSE_SILENCE_THRESH = 6 # Threshhold defining pause if sum(fft) is below the value
+PAUSE_SILENCE_THRESH = 8 # Threshhold defining pause if sum(fft) is below the value
 MESSAGE_RANDOMIZER_START = 0 # set the minimum times, how often a frame will be written into the buffer
-MESSAGE_RANDOMIZER_END = 1 # set the maximum times, how often a frame will be written into the buffer
+MESSAGE_RANDOMIZER_END = 0 # set the maximum times, how often a frame will be written into the buffer
 PREDICTION_BUFFER_MAXLEN = 440 # 3 seconds * 44.1 fps
-UPDATE_FACTOR = 0.1 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
+UPDATE_FACTOR = 0.5 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
+REPLAY_FPS_FACTOR = 5 # qucik & dirty hack to manually adjust the playback speed, because FPS calculation ssems to be wrong
 
 def fft_callback_function(fft_data):
     """
@@ -106,7 +107,7 @@ def ledoutput():
             #was_talking = True
             time_delta = time.time() - time_start
             if not LIVE_REPLAY:
-                sleep_time = (1/fft.FPS)-time_delta
+                sleep_time = (1/(fft.FPS*REPLAY_FPS_FACTOR))-time_delta
                 if sleep_time  > 0:
                     time.sleep(sleep_time) #ensure playback speed matches framerate
         #wait till the next frame package is ready
@@ -230,7 +231,6 @@ class Recording(State):
                 MESSAGE_RANDOMIZER_START, MESSAGE_RANDOMIZER_END)
             should_increase_length = should_increase_length + random.uniform(-1, 1)
             should_increase_length = np.clip(should_increase_length, -5, 5)
-        print("should increase length", should_increase_length)
         prediction_buffer.append((prediction_output, prediction_counter))
         if should_increase_length > 0:
             for i in range(random_value):

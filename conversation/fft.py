@@ -30,7 +30,7 @@ def createBins():
         theBins.append(theRange)
     return theBins
 
-DEBUG = True
+DEBUG = False
 SHOW_GRAPH = True
 FPS = 44.1
 
