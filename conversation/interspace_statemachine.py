@@ -128,7 +128,6 @@ def prediction_buffer_remove_pause():
         return
     while(prediction_buffer[-1][1] > last_frame_counter):
         prediction_buffer.pop()
-        prediction_counter -= 1
         if len(prediction_buffer) == 0:
            return
 
@@ -222,8 +221,7 @@ class Recording(State):
         prediction_input.shape = (1, neuralnet_audio.INPUT_DIM)
         prediction_output = neuralnet_audio.model.predict(prediction_input)
         prediction_output = prediction_output.flatten()
-        if len(prediction_buffer) < PREDICTION_BUFFER_MAXLEN:
-            prediction_counter += 1
+        prediction_counter += 1
         if LIVE_REPLAY:
             random_value = 1
         else:
@@ -250,13 +248,13 @@ class Recording(State):
         _frame_contains_silence, pause_detected = contains_silence_pause_detected(fft_frame)
         activation_counter += 1
         if pause_detected:
-            if prediction_counter < MINIMUM_MESSAGE_LENGTH:
+            prediction_buffer_remove_pause()
+            if len(prediction_buffer) < MINIMUM_MESSAGE_LENGTH:
                  print("Transitioned: Waiting")
                  prediction_buffer.clear()
                  prediction_counter = frames_to_remove = 0
                  return InterspaceStateMachine.waiting
             print("Transitioned: Replaying")
-            prediction_buffer_remove_pause()
             print(prediction_counter)
             print(len(prediction_buffer))
             prediction_counter = frames_to_remove = activation_counter = 0
