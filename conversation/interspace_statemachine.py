@@ -36,7 +36,7 @@ OSC_LISTEN_PORT = 8000
 PAUSE_LENGTH_FOR_RANDOM_ACTIVATION = 550 # length in frames in waiting state triggering random activation
 PAUSE_LENGTH = 40 # length in frames of silence that triggers pause event
 MINIMUM_MESSAGE_LENGTH  = 6 + PAUSE_LENGTH # ignore all messages below this length
-PAUSE_SILENCE_THRESH = 8 # Threshhold defining pause if sum(fft) is below the value
+PAUSE_SILENCE_THRESH = 18 # Threshhold defining pause if sum(fft) is below the value
 MESSAGE_RANDOMIZER_START = 0 # set the minimum times, how often a frame will be written into the buffer
 MESSAGE_RANDOMIZER_END = 0 # set the maximum times, how often a frame will be written into the buffer
 PREDICTION_BUFFER_MAXLEN = 440 # 3 seconds * 44.1 fps
@@ -165,9 +165,9 @@ def add_activation_to_buffer():
     """
     adds random activation into the buffer
     """
-    message_length = random.randint(30, 90)
+    message_length = random.randint(40, 90)
     for i in range(message_length):
-        factor = random.randint(0,70)
+        factor = random.randint(0,100)
         factor = factor/100.0
         message = [np.random.rand(neuralnet_audio.OUTPUT_DIM) * factor]
         prediction_buffer.append(message)
