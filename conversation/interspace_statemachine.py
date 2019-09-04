@@ -40,6 +40,7 @@ PAUSE_SILENCE_THRESH = 18 # Threshhold defining pause if sum(fft) is below the v
 MESSAGE_RANDOMIZER_START = 0 # set the minimum times, how often a frame will be written into the buffer
 MESSAGE_RANDOMIZER_END = 0 # set the maximum times, how often a frame will be written into the buffer
 PREDICTION_BUFFER_MAXLEN = 440 # 3 seconds * 44.1 fps
+MAX_LISTENING_LENGTH = 3 * PREDICTION_BUFFER_MAXLEN # the object will start replaying after that number of frames in recording state
 UPDATE_FACTOR = 0.5 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
 REPLAY_FPS_FACTOR = 5 # qucik & dirty hack to manually adjust the playback speed, because FPS calculation ssems to be wrong
 
@@ -128,7 +129,6 @@ def prediction_buffer_remove_pause():
         return
     while(prediction_buffer[-1][1] > last_frame_counter):
         prediction_buffer.pop()
-        prediction_counter -= 1
         if len(prediction_buffer) == 0:
            return
 
@@ -222,8 +222,7 @@ class Recording(State):
         prediction_input.shape = (1, neuralnet_audio.INPUT_DIM)
         prediction_output = neuralnet_audio.model.predict(prediction_input)
         prediction_output = prediction_output.flatten()
-        if len(prediction_buffer) < PREDICTION_BUFFER_MAXLEN:
-            prediction_counter += 1
+        prediction_counter += 1
         if LIVE_REPLAY:
             random_value = 1
         else:
@@ -250,18 +249,23 @@ class Recording(State):
         _frame_contains_silence, pause_detected = contains_silence_pause_detected(fft_frame)
         activation_counter += 1
         if pause_detected:
-            if prediction_counter < MINIMUM_MESSAGE_LENGTH:
+            prediction_buffer_remove_pause()
+            if len(prediction_buffer) < MINIMUM_MESSAGE_LENGTH:
                  print("Transitioned: Waiting")
                  prediction_buffer.clear()
                  prediction_counter = frames_to_remove = 0
                  return InterspaceStateMachine.waiting
             print("Transitioned: Replaying")
-            prediction_buffer_remove_pause()
             print(prediction_counter)
             print(len(prediction_buffer))
             prediction_counter = frames_to_remove = activation_counter = 0
             return InterspaceStateMachine.replaying
         else:
+            if(prediction_counter > MAX_LISTENING_LENGTH):
+                print("Transitioned: Replaying (prediction_counter > MAX_LISTENING_LENGTH)")
+                prediction_buffer_remove_pause()
+                prediction_counter = frames_to_remove = activation_counter = 0
+                return InterspaceStateMachine.replaying
             return InterspaceStateMachine.recording
 
 class Replaying(State):
