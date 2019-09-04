@@ -40,6 +40,7 @@ PAUSE_SILENCE_THRESH = 8 # Threshhold defining pause if sum(fft) is below the va
 MESSAGE_RANDOMIZER_START = 0 # set the minimum times, how often a frame will be written into the buffer
 MESSAGE_RANDOMIZER_END = 0 # set the maximum times, how often a frame will be written into the buffer
 PREDICTION_BUFFER_MAXLEN = 440 # 3 seconds * 44.1 fps
+MAX_LISTENING_LENGTH = 3 * PREDICTION_BUFFER_MAXLEN # the object will start replaying after that number of frames in recording state
 UPDATE_FACTOR = 0.5 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
 REPLAY_FPS_FACTOR = 5 # qucik & dirty hack to manually adjust the playback speed, because FPS calculation ssems to be wrong
 
@@ -260,6 +261,11 @@ class Recording(State):
             prediction_counter = frames_to_remove = activation_counter = 0
             return InterspaceStateMachine.replaying
         else:
+            if(prediction_counter > MAX_LISTENING_LENGTH):
+                print("Transitioned: Replaying (prediction_counter > MAX_LISTENING_LENGTH)")
+                prediction_buffer_remove_pause()
+                prediction_counter = frames_to_remove = activation_counter = 0
+                return InterspaceStateMachine.replaying
             return InterspaceStateMachine.recording
 
 class Replaying(State):
