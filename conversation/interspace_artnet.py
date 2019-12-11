@@ -326,25 +326,29 @@ class InterspaceArtnet:
         self.artnet_objects = []
         universe = 0
         for i in range(3):
-            for j in range(28):
+             for j in range(27):
                 universe += 1
-                net = StupidArtnet(target_ip_head + str(10+i), universe, packet_size)
+                ip = target_ip_head + str(10+i)
+                net = StupidArtnet(ip, universe, packet_size)
                 self.artnet_objects.append(net)
     def all_on(self):
         packet = bytearray(packet_size)         # create packet for Artnet
         for i in range(packet_size):            # fill packet with sequential values
-            packet[i] = 170
+            packet[i] = 255
         for net in self.artnet_objects:
             net.set(packet)
         self.show()
     def all_off(self):
         for net in self.artnet_objects:
             net.blackout()
-    def send_buffer(self, led_brightness_buffer):
+    def send_brightness_buffer(self, led_brightness_buffer):
         universe = 0
-        buffer = list(led_brightness_buffer)
         for net in self.artnet_objects:
-            net.set(buffer[universe*170:(universe+1)*170])
+            led_brightness_frame = led_brightness_buffer[universe*170:(universe+1)*170]
+            buffer = []
+            for brightness in led_brightness_frame:
+                buffer.extend([brightness] * 3)
+            net.set(buffer)
             universe += 1
         self.show()
     def show(self):
