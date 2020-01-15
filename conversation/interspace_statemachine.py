@@ -34,15 +34,15 @@ OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
 
 PAUSE_LENGTH_FOR_RANDOM_ACTIVATION = 550 # length in frames in waiting state triggering random activation
-PAUSE_LENGTH = 40 # length in frames of silence that triggers pause event
-MINIMUM_MESSAGE_LENGTH  = 6 + PAUSE_LENGTH # ignore all messages below this length
-PAUSE_SILENCE_THRESH = 18 # Threshhold defining pause if sum(fft) is below the value
+PAUSE_LENGTH = 26 # length in frames of silence that triggers pause event
+MINIMUM_MESSAGE_LENGTH  = 10 #+ PAUSE_LENGTH # ignore all messages below this length
+PAUSE_SILENCE_THRESH = 2 # Threshhold defining pause if sum(fft) is below the value
 MESSAGE_RANDOMIZER_START = 0 # set the minimum times, how often a frame will be written into the buffer
 MESSAGE_RANDOMIZER_END = 0 # set the maximum times, how often a frame will be written into the buffer
 PREDICTION_BUFFER_MAXLEN = 440 # 3 seconds * 44.1 fps
-MAX_LISTENING_LENGTH = 3 * PREDICTION_BUFFER_MAXLEN # the object will start replaying after that number of frames in recording state
+MAX_LISTENING_LENGTH = 10 * PREDICTION_BUFFER_MAXLEN # the object will start replaying after that number of frames in recording state
 UPDATE_FACTOR = 0.5 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
-REPLAY_FPS_FACTOR = 5 # qucik & dirty hack to manually adjust the playback speed, because FPS calculation ssems to be wrong
+REPLAY_FPS_FACTOR = 1.5 # qucik & dirty hack to manually adjust the playback speed, because FPS calculation ssems to be wrong
 
 def fft_callback_function(fft_data):
     """
@@ -165,9 +165,9 @@ def add_activation_to_buffer():
     """
     adds random activation into the buffer
     """
-    message_length = random.randint(40, 90)
+    message_length = random.randint(20, 50)
     for i in range(message_length):
-        factor = random.randint(0,100)
+        factor = random.randint(50,100)
         factor = factor/100.0
         message = [np.random.rand(neuralnet_audio.OUTPUT_DIM) * factor]
         prediction_buffer.append(message)
