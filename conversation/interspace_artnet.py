@@ -11,7 +11,7 @@ NOTES
 
 import socket
 from threading import Timer
-
+import time
 
 class StupidArtnet():
 	"""(Very) simple implementation of Artnet."""
@@ -326,21 +326,27 @@ class InterspaceArtnet:
         self.artnet_objects = []
         universe = 0
         for i in range(3):
-             for j in range(27):
-                universe += 1
+             for j in range(28):
                 ip = target_ip_head + str(10+i)
                 net = StupidArtnet(ip, universe, packet_size)
                 self.artnet_objects.append(net)
+                universe += 1
     def all_on(self):
         packet = bytearray(packet_size)         # create packet for Artnet
         for i in range(packet_size):            # fill packet with sequential values
-            packet[i] = 255
+            packet[i] = 100
         for net in self.artnet_objects:
             net.set(packet)
+            #net.flash_all()
         self.show()
     def all_off(self):
+        packet = bytearray(packet_size)         # create packet for Artnet
+        for i in range(packet_size):            # fill packet with sequential values
+            packet[i] = 0
         for net in self.artnet_objects:
+            #net.set(packet)
             net.blackout()
+        self.show()
     def send_brightness_buffer(self, led_brightness_buffer):
         universe = 0
         for net in self.artnet_objects:
