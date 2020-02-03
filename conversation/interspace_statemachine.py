@@ -80,13 +80,16 @@ def ledoutput():
         pause_event.wait()
     while True:
         frames = [x[0] for x in prediction_buffer]
+        print(len(frames))
         for frame in frames:
             int_frame = [int(x * 255) for x in frame]
+            #for i in range(576):
+            #   int_frame[i+576]=70
             artnet_sender.send_brightness_buffer(int_frame)
             print("Sending frame")
-            if not LIVE_REPLAY:
-                sleep_time = 1.0/fft.FPS
-                time.sleep(sleep_time) #ensure playback speed matches framerate
+            #if not LIVE_REPLAY:
+                #sleep_time = 1.0/fft.FPS
+                #time.sleep(sleep_time) #ensure playback speed matches framerate
         prediction_buffer.clear()
         if not LIVE_REPLAY:
             replay_finished_event.set()

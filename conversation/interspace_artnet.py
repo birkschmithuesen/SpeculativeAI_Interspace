@@ -12,13 +12,14 @@ NOTES
 import socket
 from threading import Timer
 import time
+import math
 
 class StupidArtnet():
 	"""(Very) simple implementation of Artnet."""
 
 	UDP_PORT = 6454
 
-	def __init__(self, targetIP='127.0.0.1', universe=0, packet_size=512, fps=30):
+	def __init__(self, targetIP='127.0.0.1', universe=0, packet_size=510, fps=30):
 		"""Class Initialization."""
 		# Instance variables
 		self.TARGET_IP = targetIP
@@ -319,24 +320,34 @@ class StupidArtnet():
 		return number
 
 target_ip_head = '2.0.0.'               # typically in 2.x or 10.x range
+first_controller_addres = 10
 packet_size = 510                               # it is not necessary to send whole universe
+numController = 3
+numStripesPerController = 8
+numLedsPerStripe = 576
+numStripes = 24
+numUniversesPerController = math.ceil((numStripesPerController * numLedsPerStripe *3) / 510)
+numUniverses = numController * numUniversesPerController
+numLeds = numLedsPerStripe * numStripes
+numPixelPerController = numStripesPerController * numLedsPerStripe
 
 class InterspaceArtnet:
     def __init__(self):
         self.artnet_objects = []
         universe = 0
-        for i in range(3):
-             for j in range(28):
-                ip = target_ip_head + str(10+i)
+        for i in range(numController):
+             for j in range(numUniversesPerController):
+                ip = target_ip_head + str(first_controller_addres+i)
                 net = StupidArtnet(ip, universe, packet_size)
                 self.artnet_objects.append(net)
                 universe += 1
     def all_on(self):
-        packet = bytearray(packet_size)         # create packet for Artnet
-        for i in range(packet_size):            # fill packet with sequential values
-            packet[i] = 100
+        packet = bytearray(packet_size+100)         # create packet for Artnet
+        for i in range(packet_size+100):            # fill packet with sequential values
+            packet[i] = 60
         for net in self.artnet_objects:
             net.set(packet)
+        #self.artnet_objects[3].set(packet)
             #net.flash_all()
         self.show()
     def all_off(self):
@@ -349,11 +360,17 @@ class InterspaceArtnet:
         self.show()
     def send_brightness_buffer(self, led_brightness_buffer):
         universe = 0
-        for net in self.artnet_objects:
-            led_brightness_frame = led_brightness_buffer[universe*170:(universe+1)*170]
+        for net in self.artnet_objects:			# is equal to numUniverses
+            controllerNumber = int(universe / numUniversesPerController)
+            pixelOffset = controllerNumber * numPixelPerController + (universe - (controllerNumber * numUniversesPerController)) * 170
+            if (numLeds - pixelOffset < 170):
+                led_brightness_frame = led_brightness_buffer[pixelOffset:numLeds]
+            else:
+                led_brightness_frame = led_brightness_buffer[pixelOffset:pixelOffset+170]
+            #led_brightness_frame = led_brightness_buffer[universe*170:(universe+1)*170]
             buffer = []
             for brightness in led_brightness_frame:
-                buffer.extend([brightness] * 3)
+                buffer.extend([brightness] * 3)	#fill up RGB value with the same monochromic value
             net.set(buffer)
             universe += 1
         self.show()
