@@ -18,7 +18,7 @@ import numpy as np
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the computed
 
 MODEL_FILE_PATH = './model.h5'
-MODEL_TRAININGS_DATA_FILE_PATH = 'traingsdata.txt'
+MODEL_TRAININGS_DATA_FILE_PATH = 'trgsdata.txt'
 
 LOAD_MODEL = os.path.isfile(MODEL_FILE_PATH)
 SAVE_MODEL = not LOAD_MODEL
@@ -32,7 +32,10 @@ HIDDEN1_DIM = 512
 HIDDEN2_DIM = 4096
 OUTPUT_DIM = 13824
 
-sess = Session(config=ConfigProto(log_device_placement=True))
+config = ConfigProto(log_device_placement=True)
+config.gpu_options.allow_growth = True
+config.gpu_options.per_process_gpu_memory_fraction = 0.8
+sess = Session(config=config)
 model = Sequential()
 
 def load_model_from_file():
@@ -43,6 +46,14 @@ def load_model_from_file():
     model = load_model(MODEL_FILE_PATH)
     model._make_predict_function()
     print('Loaded saved model from file')
+
+
+def build_model():
+    """
+    Return the model
+    """
+    run()
+    return model
 
 def train_model():
     """
