@@ -23,14 +23,15 @@ MODEL_TRAININGS_DATA_FILE_PATH = 'traingsdata.txt'
 LOAD_MODEL = os.path.isfile(MODEL_FILE_PATH)
 SAVE_MODEL = not LOAD_MODEL
 
-INPUT_DIM = 128
+
 BATCH_SIZE = 32
 EPOCHS = 30
 INITIAL_EPOCHS = 150
 
+INPUT_DIM = 131 #XYZ + FFT analysis
 HIDDEN1_DIM = 512
 HIDDEN2_DIM = 4096
-OUTPUT_DIM = 13824
+OUTPUT_DIM = 1 #Brightness
 
 sess = Session(config=ConfigProto(log_device_placement=True))
 model = Sequential()
