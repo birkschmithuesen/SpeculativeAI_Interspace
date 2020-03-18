@@ -17,18 +17,13 @@ def createBins():
     creates the BIN Array for the FFT. The function creates bigger intervals for higher frequencies
     """
     theBins = []
-    startFreq = 30
-    for a in range(64):
-        endFreq = startFreq+21.5
+    startFreq = 50
+    for a in range(32):
+        endFreq = int(startFreq*1.15+10)
         theRange = (startFreq, endFreq)
         startFreq = endFreq
         theBins.append(theRange)
-    for a in range(64):
-        endFreq = startFreq+(6*(a+4))
-        theRange = (startFreq, endFreq)
-        startFreq = endFreq
-        theBins.append(theRange)
-    return theBins
+    return(theBins)
 
 DEBUG = False
 SHOW_GRAPH = True
@@ -114,8 +109,8 @@ class SpectrumAnalyzer:
         self.last_frame_timestamp = time.time()
         if DEBUG:
             self.log_fps(self.last_frame_timestamp, fps)
-        sys.stdout.write("\r{} FPS".format(fps))
-        sys.stdout.flush()
+            sys.stdout.write("\r{} FPS".format(fps))
+            sys.stdout.flush()
         self.data = np.frombuffer(in_data, dtype=np.float32)
         if self.binned:
             self.binned_fft()
