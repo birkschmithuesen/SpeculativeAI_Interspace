@@ -17,22 +17,18 @@ def createBins():
     creates the BIN Array for the FFT. The function creates bigger intervals for higher frequencies
     """
     theBins = []
-    startFreq = 30
-    for a in range(64):
-        endFreq = startFreq+21.5
+    startFreq = 50
+    for a in range(32):
+        endFreq = int(startFreq*1.15+10)
         theRange = (startFreq, endFreq)
         startFreq = endFreq
         theBins.append(theRange)
-    for a in range(64):
-        endFreq = startFreq+(6*(a+4))
-        theRange = (startFreq, endFreq)
-        startFreq = endFreq
-        theBins.append(theRange)
-    return theBins
+    return(theBins)
 
 DEBUG = False
 SHOW_GRAPH = True
 FPS = 44.1
+UPDATE_FACTOR = 0.5 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
 
 OSC_IP = "127.0.0.1"
 OSC_PORT = 8001

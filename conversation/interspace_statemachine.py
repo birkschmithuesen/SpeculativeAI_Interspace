@@ -85,7 +85,7 @@ def ledoutput():
             int_frame = [int(x * 255) for x in frame]
             #for i in range(576):
             #   int_frame[i+576]=70
-            artnet_sender.send_brightness_buffer(int_frame)
+            #artnet_sender.send_brightness_buffer(int_frame)
             print("Sending frame")
             #if not LIVE_REPLAY:
                 #sleep_time = 1.0/fft.FPS
@@ -277,7 +277,7 @@ class InterspaceStateMachine(StateMachine):
         neuralnet_audio.run()
 
 spectrum_analyzer = fft.SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
-artnet_sender = interspace_artnet.InterspaceArtnet()
+#artnet_sender = interspace_artnet.InterspaceArtnet()
 pause_counter = 0
 activation_counter = 0
 frame_received_semaphore = threading.Semaphore(0)
