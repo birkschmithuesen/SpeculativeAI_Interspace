@@ -114,8 +114,8 @@ class SpectrumAnalyzer:
         self.last_frame_timestamp = time.time()
         if DEBUG:
             self.log_fps(self.last_frame_timestamp, fps)
-        sys.stdout.write("\r{} FPS".format(fps))
-        sys.stdout.flush()
+        #sys.stdout.write("\r{} FPS".format(fps))
+        #sys.stdout.flush()
         self.data = np.frombuffer(in_data, dtype=np.float32)
         if self.binned:
             self.binned_fft()

@@ -35,7 +35,7 @@ import os
 from numpy import loadtxt
 from fft import SpectrumAnalyzer
 
-#os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the computed
+#os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the CPU
 
 # the ip and port to send the LED data to. The program Ortlicht receives them via OSC and
 # converts them to ArtNet
@@ -44,26 +44,28 @@ UDP_PORT = 10005
 OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
 
-LOAD_MODEL_WITHOUT_TRAINING = False # set False if you ant to load a model and continue to train it
-LOAD_MODEL_TO_CONTINUE_TRAINING = True
-SAVE_MODEL = True
-LOAD_TRAININGSDATA = True
+LOAD_MODEL_WITHOUT_TRAINING = True # set False if you ant to load a model and continue to train it
+LOAD_MODEL_TO_CONTINUE_TRAINING = False
+SAVE_MODEL = False
+LOAD_TRAININGSDATA = False
 INITIALIZE_NEW_NETWORK = False
-DO_TRAINING = True
+DO_TRAINING = False
 UPDATE_FACTOR = 0.2 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
 
 
 model = Sequential()
 
-INPUT_DIM = 128
+N_LEDS = 13824
+INPUT_DIM = 131
+FFT_DIM = 128
 NUM_SOUNDS = 1
 BATCH_SIZE = 32
 EPOCHS = 30
 INITIAL_EPOCHS = 30
 
-HIDDEN1_DIM = 512
-HIDDEN2_DIM = 4096
-OUTPUT_DIM = 13824
+HIDDEN1_DIM = 64
+HIDDEN2_DIM = 32
+OUTPUT_DIM = 1
 
 last_prediction_input = 0
 
@@ -167,6 +169,17 @@ def ledoutput():
 initialize_server()
 
 """
+load LED ledPositions
+"""
+
+
+file_name='ledPositions.csv'
+file = open(file_name)
+print('Loading Led Position Data from File:', file_name,'  ...')
+ledPositions=loadtxt(file_name, dtype='float32')
+print('Number of LEDs: ',ledPositions.shape[0])
+
+"""
 Initialize NeuralNetwork.
 """
 
@@ -184,10 +197,33 @@ if LOAD_TRAININGSDATA:
     print('Loading Trainingsdata from File:', file_name,'  ...')
     values=loadtxt(file_name, dtype='float32')
     print('Trainingsdata points: ',values.shape[0])
-    print()
     #split into input and outputs
-    training_input, training_output = values[:,:-13824], values[:,INPUT_DIM:]
+    n = N_LEDS*values.shape[0]
+    #training_input_list=[[] for x in range(n)]
+    training_input_list=[]
+    training_output_list=[]
+    #training_output_list=np.empty((N_LEDS*values.shape[0],1))
+    #training_input_list=np.empty((N_LEDS*values.shape[0], FFT_DIM+3))
+    #print('training_output shape: ', training_output.shape)
+    for x in range(N_LEDS):
+        index=FFT_DIM + x * 3
+        fft_pos = np.hstack([values[:,:FFT_DIM], values[:, index:index+3]])
+        brightness = values[:,index+4:index+5]
+
+        #for y in range(fft_pos.shape[0]):
+        training_input_list.append(fft_pos.tolist())
+        training_output_list.append(brightness.tolist())
+        #training_input, training_output = values[:,:-13824], values[:,INPUT_DIM:]
+        #print(x, ' of ', N_LEDS)
+        #print(training_output_list[0])
+    training_input = np.array(training_input_list)
+    training_output = np.array(training_output_list)
     print('training_input shape: ', training_input.shape, 'training_output shape: ', training_output.shape)
+    training_input=training_input.reshape((-1, FFT_DIM+3))
+    training_output=training_output.reshape((-1, 1))
+
+    print('training_input shape: ', training_input.shape, 'training_output shape: ', training_output.shape)
+    print(training_input[0])
 if INITIALIZE_NEW_NETWORK:
     my_init=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
     model.add(Dense(HIDDEN1_DIM, activation='sigmoid', input_dim=INPUT_DIM, kernel_initializer=my_init, bias_initializer=my_init))
@@ -205,6 +241,7 @@ if SAVE_MODEL:
     model.save('model.h5')
     print('Saved new model 2 disk')
     model.summary()
+
 """
 main loop:
 we have two threads:
@@ -219,21 +256,31 @@ t1.start()
 SPEC = SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
 
 def loop():
-    global last_prediction_input
+    global last_fft_analysis
+    last_fft_analysis=np.empty(NUM_SOUNDS)
     while 0<1:
         for i in range(NUM_SOUNDS):
             e1.acquire()
-        prediction_input=np.asarray([fft.pop() for x in range(NUM_SOUNDS)]) * UPDATE_FACTOR + last_prediction_input * (1 - UPDATE_FACTOR)
-        last_prediction_input = prediction_input
-        #prediction_input = np.reshape=(prediction_input, (1,NUM_SOUNDS,INPUT_DIM))
-        prediction_input.shape=(1,INPUT_DIM)
-        prediction_output=model.predict(prediction_input)
-        prediction_output=prediction_output.flatten()
-        #print(prediction_input)
+        fft_analysis=np.asarray([fft.pop() for x in range(NUM_SOUNDS)]) * UPDATE_FACTOR + last_fft_analysis * (1 - UPDATE_FACTOR)
+        last_fft_analysis = fft_analysis
+        # do the prediction on all leds
+        prediction_frame = []
+        for i in range(ledPositions.shape[0]):
+            prediction_input = fft_analysis
+            #print("ledPosition: ", ledPositions[i])
+            prediction_input=np.append(prediction_input, ledPositions[i])
+            prediction_input.shape=(1,INPUT_DIM)
+            prediction_output = model.predict(prediction_input)
+            prediction_frame.append(prediction_output)
+
+        prediction_frame=np.asarray(prediction_frame)
+        prediction_frame.flatten()
+
+        print("--- FRAME FINISHED --- Shape: ", len(prediction_frame))
         #print("Finished prediction with shape:" + str(prediction_output.shape))
         #print(prediction_output)
-        dout.append(prediction_output)
-        e2.set()
+        #dout.append(prediction_frame)
+        #e2.set()
 
 t2 = threading.Thread(name='prediction', target=loop, daemon=True)
 t2.start()
