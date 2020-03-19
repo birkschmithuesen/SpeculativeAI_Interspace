@@ -186,7 +186,7 @@ if LOAD_TRAININGSDATA:
     print('Trainingsdata points: ',values.shape[0])
     print()
     #split into input and outputs
-    training_input, training_output = values[:,:-13824], values[:,INPUT_DIM:]
+    training_input, training_output = values[:,:-OUTPUT_DIM], values[:,INPUT_DIM:]
     print('training_input shape: ', training_input.shape, 'training_output shape: ', training_output.shape)
 if INITIALIZE_NEW_NETWORK:
     my_init=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
