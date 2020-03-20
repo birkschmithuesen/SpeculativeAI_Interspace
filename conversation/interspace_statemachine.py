@@ -263,8 +263,8 @@ class Replaying(State):
 class InterspaceStateMachine(StateMachine):
     def __init__(self):
         StateMachine.__init__(self, InterspaceStateMachine.waiting)
-        self.t1 = threading.Thread(name='ledoutput', target=ledoutput, daemon=True)
-        self.t1.start()
+        #self.t1 = threading.Thread(name='ledoutput', target=ledoutput, daemon=True)
+        #self.t1.start()
         print("Initialized: Waiting")
         initialize_server()
         neuralnet_audio.run()
