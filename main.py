@@ -58,11 +58,11 @@ model = Sequential()
 INPUT_DIM = 32
 NUM_SOUNDS = 1
 BATCH_SIZE = 32
-EPOCHS = 30
-INITIAL_EPOCHS = 10
+EPOCHS = 100
+INITIAL_EPOCHS = 500
 
 HIDDEN1_DIM = 512
-HIDDEN2_DIM = 4096
+#HIDDEN2_DIM = 4096
 OUTPUT_DIM = 13824
 
 last_prediction_input = 0
@@ -88,23 +88,6 @@ def frameCountHandler(unused_addr, args):
     global frameCount
     frameCount = args
 
-def newModel_handler(unused_addr, args):
-    """
-    this function should reinitialize the model, to start the training from scratch again.
-    ToDo: make it work. Probably the crash is caused because of the multi-threading?
-    """
-    kerasBackend.clear_session()
-    my_init = keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
-
-    model.add(Dense(6144, activation='sigmoid', input_dim=30, kernel_initializer=my_init,
-                    bias_initializer=my_init))
-    model.add(Dense(13824, activation='sigmoid',kernel_initializer=my_init,
-                    bias_initializer=my_init))
-    sgd = SGD(lr=0.06, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
-    model.fit(training_input, training_output, epochs=1, batch_size=32, shuffle=True)
-    model._make_predict_function()
-    print('Loaded new model')
 
 def train_handler(unused_addr, args):
     """
@@ -131,7 +114,6 @@ def initialize_server():
     dispatcher = dispatcher.Dispatcher()
     dispatcher.map("/Playback/Recorder/frameCount", frameCountHandler)
     dispatcher.map("/train", train_handler)
-    dispatcher.map("/newModel", newModel_handler)
     try:
         server = osc_server.ThreadingOSCUDPServer((args.ip, args.port), dispatcher)
         server_thread=threading.Thread(target=server.serve_forever, daemon=True)
