@@ -342,9 +342,9 @@ class InterspaceArtnet:
                 self.artnet_objects.append(net)
                 universe += 1
     def all_on(self):
-        packet = bytearray(packet_size+100)         # create packet for Artnet
-        for i in range(packet_size+100):            # fill packet with sequential values
-            packet[i] = 60
+        packet = bytearray(packet_size)         # create packet for Artnet
+        for i in range(packet_size):            # fill packet with sequential values
+            packet[i] = 100
         for net in self.artnet_objects:
             net.set(packet)
         #self.artnet_objects[3].set(packet)
@@ -382,9 +382,17 @@ if __name__ == "__main__":
     inter = InterspaceArtnet()
     FPS = 44
 
-    for i in range(1000):
+    for i in range(300):
+
         print("On")
-        inter.all_on()
+        #inter.all_on()
+        theBrightnessBuffer = bytearray(numLeds)
+        for j in range(numLeds):
+            if (j < 576):
+                theBrightnessBuffer[j] = 70
+            else:
+                theBrightnessBuffer[j] = 0
+        inter.send_brightness_buffer(theBrightnessBuffer)
         time.sleep(1.0/FPS)
         print("Off")
         inter.all_off()
