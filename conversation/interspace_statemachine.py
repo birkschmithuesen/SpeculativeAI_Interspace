@@ -74,22 +74,22 @@ def initialize_server():
 def ledoutput():
     """
     runs parallel in a single thread
-    when a new prediction is ready, it sends the LED data via OSC to 'Ortlicht'
+    when a new prediction is ready, it sends the LED data via ArtNet over Udp to 'Intersapce'
     """
     if not LIVE_REPLAY:
         pause_event.wait()
     while True:
         frames = [x[0] for x in prediction_buffer]
-        print(len(frames))
+        #print(len(frames))
         for frame in frames:
+            #This is the bottleneck
             int_frame = [int(x * 255) for x in frame]
-            #for i in range(576):
-            #   int_frame[i+576]=70
-            #artnet_sender.send_brightness_buffer(int_frame)
+            #Artnet Sending works fine now. Just the package size is wrong, but doesnt really matter....
+            artnet_sender.send_brightness_buffer(int_frame)
             print("Sending frame")
-            #if not LIVE_REPLAY:
-                #sleep_time = 1.0/fft.FPS
-                #time.sleep(sleep_time) #ensure playback speed matches framerate
+            if not LIVE_REPLAY:
+                sleep_time = 1.0/fft.FPS
+                time.sleep(sleep_time) #ensure playback speed matches framerate
         prediction_buffer.clear()
         if not LIVE_REPLAY:
             replay_finished_event.set()
@@ -277,7 +277,7 @@ class InterspaceStateMachine(StateMachine):
         neuralnet_audio.run()
 
 spectrum_analyzer = fft.SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
-#artnet_sender = interspace_artnet.InterspaceArtnet()
+artnet_sender = interspace_artnet.InterspaceArtnet()
 pause_counter = 0
 activation_counter = 0
 frame_received_semaphore = threading.Semaphore(0)
