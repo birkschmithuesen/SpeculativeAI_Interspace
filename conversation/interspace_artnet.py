@@ -105,7 +105,6 @@ class StupidArtnet():
 
 	def show(self):
 		"""Finally send data."""
-		print("send packet")
 		packet = bytearray()
 		packet.extend(self.HEADER)
 		packet.extend(self.BUFFER)
@@ -184,8 +183,6 @@ class StupidArtnet():
 
 	def set(self, p):
 		"""Set buffer."""
-		print("the buffer size: ", len(self.BUFFER))
-		print("the packet size length: ", self.PACKET_SIZE)
 		if len(self.BUFFER) != self.PACKET_SIZE:
 			print("ERROR: packet does not match declared packet size")
 			return
@@ -372,7 +369,7 @@ class InterspaceArtnet:
             else:
                 led_brightness_frame = led_brightness_buffer[pixelOffset:pixelOffset+170]
             #led_brightness_frame = led_brightness_buffer[universe*170:(universe+1)*170]
-            buffer = []
+            buffer = bytearray()
             for brightness in led_brightness_frame:
                 buffer.extend([brightness] * 3)	#fill up RGB value with the same monochromic value
             #print(buffer)
@@ -401,5 +398,5 @@ if __name__ == "__main__":
         inter.send_brightness_buffer(theBrightnessBuffer)
         time.sleep(1.0/FPS)
         print("Off")
-        inter.all_off()
+        #inter.all_off()
         time.sleep(1.0/FPS)

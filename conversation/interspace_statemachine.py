@@ -93,9 +93,10 @@ def ledoutput():
         #int_frame = np.array(frame
         #int_frame = npFrame.astype(int)
         #Artnet Sending works fine now. Just the package size is wrong, but doesnt really matter....
-        print("sent array to artnet_sender")
-        print("Length of the BirghtnessBuffer: ", len(theBrightnessBuffer))
-        artnet_sender.send_brightness_buffer(theBrightnessBuffer)
+        print("sent ON array to artnet_sender")
+        #artnet_sender.send_brightness_buffer(theBrightnessBuffer)
+        artnet_sender.all_on()
+        print("sent OFF array to artnet_sender")
         time.sleep(1.0/44)
         artnet_sender.all_off()
         time.sleep(1.0/44)
