@@ -364,7 +364,6 @@ class InterspaceArtnet:
         self.show()
     def send_brightness_buffer(self, led_brightness_buffer):
         universe = 0
-        print("buffer length: ", len(led_brightness_buffer))
         for net in self.artnet_objects:			# is equal to numUniverses
             controllerNumber = int(universe / self.numUniversesPerController)
             pixelOffset = controllerNumber * self.numPixelPerController + (universe - (controllerNumber * self.numUniversesPerController)) * 170
@@ -376,6 +375,7 @@ class InterspaceArtnet:
             buffer = []
             for brightness in led_brightness_frame:
                 buffer.extend([brightness] * 3)	#fill up RGB value with the same monochromic value
+            #print(buffer)
             net.set(buffer)
             universe += 1
         self.show()

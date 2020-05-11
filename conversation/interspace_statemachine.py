@@ -76,37 +76,38 @@ def ledoutput():
     runs parallel in a single thread
     when a new prediction is ready, it sends the LED data via ArtNet over Udp to 'Intersapce'
     """
-    if not LIVE_REPLAY:
-        pause_event.wait()
-    while True:
-        frames = [x[0] for x in prediction_buffer]
-        for frame in frames:
-            #This is the bottleneck
-            print("create array...")
-            numLeds = 13824
-            theBrightnessBuffer = bytearray(numLeds)
-            for j in range(numLeds):
-                if (j < 576):
-                    theBrightnessBuffer[j] = 70
-                else:
-                    theBrightnessBuffer[j] = 0
-            #conversion to INT with list
-            #int_frame = [int(x * 255) for x in frame]
-            #conversion to INT with numpy
-            #int_frame = np.array(frame
-            #int_frame = npFrame.astype(int)
-            #Artnet Sending works fine now. Just the package size is wrong, but doesnt really matter....
-            print("sent array to artnet_sender")
-            artnet_sender.send_brightness_buffer(theBrightnessBuffer)
-            print("Sending frame")
-            if not LIVE_REPLAY:
-                sleep_time = 1.0/fft.FPS
-                #time.sleep(sleep_time) #ensure playback speed matches framerate
-        prediction_buffer.clear()
+    frames = [x[0] for x in prediction_buffer]
+    for frame in frames:
+        #This is the bottleneck
+        print("create array...")
+        numLeds = 13824
+        theBrightnessBuffer = bytearray(numLeds)
+        for j in range(numLeds):
+            if (j < 576):
+                theBrightnessBuffer[j] = 70
+            else:
+                theBrightnessBuffer[j] = 0
+        #conversion to INT with list
+        #int_frame = [int(x * 255) for x in frame]
+        #conversion to INT with numpy
+        #int_frame = np.array(frame
+        #int_frame = npFrame.astype(int)
+        #Artnet Sending works fine now. Just the package size is wrong, but doesnt really matter....
+        print("sent array to artnet_sender")
+        print("Length of the BirghtnessBuffer: ", len(theBrightnessBuffer))
+        artnet_sender.send_brightness_buffer(theBrightnessBuffer)
+        time.sleep(1.0/44)
+        artnet_sender.all_off()
+        time.sleep(1.0/44)
+        print("Sending frame")
         if not LIVE_REPLAY:
-            replay_finished_event.set()
-            pause_event.clear()
-            pause_event.wait()
+            sleep_time = 1.0/fft.FPS
+            #time.sleep(sleep_time) #ensure playback speed matches framerate
+    prediction_buffer.clear()
+    if not LIVE_REPLAY:
+        replay_finished_event.set()
+        pause_event.clear()
+        pause_event.wait()
 
 def prediction_buffer_remove_pause():
     """
@@ -268,20 +269,21 @@ class Replaying(State):
     a separate thread triggered by the pause_event threading.Event().
     """
     def run(self, fft_frame):
-        if not replay_finished_event.isSet():
-            pause_event.set()
+        ledoutput()
+        #if not replay_finished_event.isSet():
+        #    pause_event.set()
     def next(self, fft_frame):
-        if replay_finished_event.isSet():
-            replay_finished_event.clear()
-            print("Transitioned: Waiting")
-            return InterspaceStateMachine.waiting
-        return InterspaceStateMachine.replaying
-
+        #if replay_finished_event.isSet():
+        #    replay_finished_event.clear()
+        #    print("Transitioned: Waiting")
+        #    return InterspaceStateMachine.waiting
+        #return InterspaceStateMachine.replaying
+        return InterspaceStateMachine.waiting
 class InterspaceStateMachine(StateMachine):
     def __init__(self):
         StateMachine.__init__(self, InterspaceStateMachine.waiting)
-        self.t1 = threading.Thread(name='ledoutput', target=ledoutput, daemon=True)
-        self.t1.start()
+        #self.t1 = threading.Thread(name='ledoutput', target=ledoutput, daemon=True)
+        #self.t1.start()
         print("Initialized: Waiting")
         initialize_server()
         neuralnet_audio.run()
