@@ -80,16 +80,28 @@ def ledoutput():
         pause_event.wait()
     while True:
         frames = [x[0] for x in prediction_buffer]
-        #print(len(frames))
         for frame in frames:
             #This is the bottleneck
-            int_frame = [int(x * 255) for x in frame]
+            print("create array...")
+            numLeds = 13824
+            theBrightnessBuffer = bytearray(numLeds)
+            for j in range(numLeds):
+                if (j < 576):
+                    theBrightnessBuffer[j] = 70
+                else:
+                    theBrightnessBuffer[j] = 0
+            #conversion to INT with list
+            #int_frame = [int(x * 255) for x in frame]
+            #conversion to INT with numpy
+            #int_frame = np.array(frame
+            #int_frame = npFrame.astype(int)
             #Artnet Sending works fine now. Just the package size is wrong, but doesnt really matter....
-            artnet_sender.send_brightness_buffer(int_frame)
+            print("sent array to artnet_sender")
+            artnet_sender.send_brightness_buffer(theBrightnessBuffer)
             print("Sending frame")
             if not LIVE_REPLAY:
                 sleep_time = 1.0/fft.FPS
-                time.sleep(sleep_time) #ensure playback speed matches framerate
+                #time.sleep(sleep_time) #ensure playback speed matches framerate
         prediction_buffer.clear()
         if not LIVE_REPLAY:
             replay_finished_event.set()
@@ -244,8 +256,6 @@ class Recording(State):
                  return InterspaceStateMachine.waiting
             print("Transitioned: Replaying")
             prediction_buffer_remove_pause()
-            print(prediction_counter)
-            print(len(prediction_buffer))
             prediction_counter = frames_to_remove = activation_counter = 0
             return InterspaceStateMachine.replaying
         else:
