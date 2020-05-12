@@ -77,34 +77,16 @@ def ledoutput():
     """
     frames = [x[0] for x in prediction_buffer]
     for frame in frames:
-        #This is the bottleneck
-        print("create array...")
-        numLeds = 13824
-        theBrightnessBuffer = bytearray(numLeds)
-        for j in range(numLeds):
-            if (j < 576):
-                theBrightnessBuffer[j] = 70
-            else:
-                theBrightnessBuffer[j] = 0
         #conversion to INT with list
         #int_frame = [int(x * 255) for x in frame]
         #conversion to INT with numpy
-        #int_frame = np.array(frame
-        #int_frame = npFrame.astype(int)
-        #Artnet Sending works fine now. Just the package size is wrong, but doesnt really matter....
-        #print("sent ON array to artnet_sender")
-        artnet_sender.send_brightness_buffer(theBrightnessBuffer)
-        """
-        artnet_sender.all_on()
-        print("sent OFF array to artnet_sender")
-        time.sleep(1.0/44)
-        artnet_sender.all_off()
-        time.sleep(1.0/44)
-        """
+        int_frame = np.array(frame)*255
+        int_frame = int_frame.astype(int)
+        artnet_sender.send_brightness_buffer(int_frame)
         print("Sending frame")
         if not LIVE_REPLAY:
             sleep_time = 1.0/fft.FPS
-            #time.sleep(sleep_time) #ensure playback speed matches framerate
+            time.sleep(sleep_time) #ensure playback speed matches framerate
     prediction_buffer.clear()
 
 def prediction_buffer_remove_pause():
