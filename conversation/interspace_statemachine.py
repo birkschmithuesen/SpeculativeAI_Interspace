@@ -47,7 +47,6 @@ def fft_callback_function(fft_data):
     this function is called when fft values are received via OSC (from ableton Live)
     """
     fft_buffer.append(list(fft_data))
-    frame_received_semaphore.release()
 
 def initialize_server():
     """
@@ -93,22 +92,20 @@ def ledoutput():
         #int_frame = np.array(frame
         #int_frame = npFrame.astype(int)
         #Artnet Sending works fine now. Just the package size is wrong, but doesnt really matter....
-        print("sent ON array to artnet_sender")
-        #artnet_sender.send_brightness_buffer(theBrightnessBuffer)
+        #print("sent ON array to artnet_sender")
+        artnet_sender.send_brightness_buffer(theBrightnessBuffer)
+        """
         artnet_sender.all_on()
         print("sent OFF array to artnet_sender")
         time.sleep(1.0/44)
         artnet_sender.all_off()
         time.sleep(1.0/44)
+        """
         print("Sending frame")
         if not LIVE_REPLAY:
             sleep_time = 1.0/fft.FPS
             #time.sleep(sleep_time) #ensure playback speed matches framerate
     prediction_buffer.clear()
-    if not LIVE_REPLAY:
-        replay_finished_event.set()
-        pause_event.clear()
-        pause_event.wait()
 
 def prediction_buffer_remove_pause():
     """
@@ -293,7 +290,6 @@ spectrum_analyzer = fft.SpectrumAnalyzer(fft_callback_function, binned=True, sen
 artnet_sender = interspace_artnet.InterspaceArtnet()
 pause_counter = 0
 activation_counter = 0
-frame_received_semaphore = threading.Semaphore(0)
 pause_event = threading.Event()
 replay_finished_event = threading.Event()
 fft_buffer = []

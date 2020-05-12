@@ -11,16 +11,9 @@ from conversation import interspace_statemachine
 if __name__ == "__main__":
     state_machine = interspace_statemachine.InterspaceStateMachine()
 
-    def state_machine_loop():
-        while True:
-            interspace_statemachine.frame_received_semaphore.acquire()
-            fft_frame = interspace_statemachine.fft_buffer.pop()
-            state_machine.run(fft_frame)
-
-    t2 = threading.Thread(name='state_machine_loop', target=state_machine_loop, daemon=True)
-    t2.start()
-
     while True:
+        fft_frame = interspace_statemachine.fft_buffer.pop()
+        state_machine.run(fft_frame)
         try:
             interspace_statemachine.spectrum_analyzer.tick()
         except KeyboardInterrupt:

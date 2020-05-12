@@ -324,7 +324,8 @@ class StupidArtnet():
 class InterspaceArtnet:
     target_ip_head = '2.0.0.'               # typically in 2.x or 10.x range
     first_controller_addres = 10
-    packet_size = 510                               # it is not necessary to send whole universe
+    packet_size = 510                          # it is not necessary to send whole universe
+    last_packet_size = 54
     numController = 3
     numStripesPerController = 8
     numLedsPerStripe = 576
@@ -339,7 +340,11 @@ class InterspaceArtnet:
         for i in range(self.numController):
              for j in range(self.numUniversesPerController):
                 ip = self.target_ip_head + str(self.first_controller_addres+i)
-                net = StupidArtnet(ip, universe, self.packet_size)
+                if (i+1) * (j+1) == self.numUniverses:
+                   p_size = 54
+                else:
+                   p_size = self.packet_size
+                net = StupidArtnet(ip, universe, p_size)
                 self.artnet_objects.append(net)
                 universe += 1
     def all_on(self):
@@ -398,5 +403,5 @@ if __name__ == "__main__":
         inter.send_brightness_buffer(theBrightnessBuffer)
         time.sleep(1.0/FPS)
         print("Off")
-        #inter.all_off()
+        inter.all_off()
         time.sleep(1.0/FPS)
