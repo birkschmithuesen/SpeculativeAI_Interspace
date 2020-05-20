@@ -47,6 +47,7 @@ def fft_callback_function(fft_data):
     this function is called when fft values are received via OSC (from ableton Live)
     """
     fft_buffer.append(list(fft_data))
+    frame_received_semaphore.release()
 
 def initialize_server():
     """
@@ -272,6 +273,7 @@ spectrum_analyzer = fft.SpectrumAnalyzer(fft_callback_function, binned=True, sen
 artnet_sender = interspace_artnet.InterspaceArtnet()
 pause_counter = 0
 activation_counter = 0
+frame_received_semaphore = threading.Semaphore(0)
 pause_event = threading.Event()
 replay_finished_event = threading.Event()
 fft_buffer = []

@@ -12,6 +12,7 @@ if __name__ == "__main__":
     state_machine = interspace_statemachine.InterspaceStateMachine()
 
     while True:
+        interspace_statemachine.frame_received_semaphore.acquire()
         fft_frame = interspace_statemachine.fft_buffer.pop()
         state_machine.run(fft_frame)
         try:
