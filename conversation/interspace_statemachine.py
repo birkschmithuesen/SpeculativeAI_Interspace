@@ -259,6 +259,11 @@ class Replaying(State):
         #    print("Transitioned: Waiting")
         #    return InterspaceStateMachine.waiting
         #return InterspaceStateMachine.replaying
+        # we need to empty the buffer and reset the semaphore counter
+        # so the chunks buffered during replay will be discarded
+        for i in range(len(fft_buffer)):
+            frame_received_semaphore.acquire()
+            fft_buffer.pop()
         return InterspaceStateMachine.waiting
 class InterspaceStateMachine(StateMachine):
     def __init__(self):
