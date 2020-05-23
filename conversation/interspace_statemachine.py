@@ -41,7 +41,7 @@ MESSAGE_RANDOMIZER_END = 0 # set the maximum times, how often a frame will be wr
 VOLUME_RANDOMIZER_START = 0 # set the minimum value, how much the volume of the different synths will be changed by chance
 VOLUME_RANDOMIZER_END = 0 # set the maximum value, how much the volume of the different synths will be changed by chance
 PREDICTION_BUFFER_MAXLEN = 4410 # 10 seconds * 44.1 fps
-TRACE = 0.3 #sets the factor how much the last frame will be mixed with a new one before sendin to Artnet Output
+TRACE = 0.8 #sets the factor how much the actual frame will be mixed with the last one before sendin to Artnet Output. This is the same on the output side as done in the FFT Class with the UPDATE_FACTOR
 
 def fft_callback_function(fft_data):
     """
@@ -77,15 +77,15 @@ def ledoutput():
     runs parallel in a single thread
     when a new prediction is ready, it sends the LED data via ArtNet over Udp to 'Intersapce'
     """
+    global last_frame
     frames = [x[0] for x in prediction_buffer]
-    last_frame =  np.array(frames[0])*255
     #last_frame = last_frame.astype(int)
     for frame in frames:
         #conversion to INT with list
         #int_frame = [int(x * 255) for x in frame]
         #conversion to INT with numpy
         int_frame = np.array(frame)*255
-        int_frame = int_frame + TRACE * last_frame
+        int_frame = int_frame * TRACE + last_frame *(1 - TRACE)
         last_frame = int_frame
         int_frame = int_frame.astype(int)
         int_frame = int_frame.clip(0, 255)
@@ -94,7 +94,7 @@ def ledoutput():
         if not LIVE_REPLAY:
             sleep_time = 1.0/fft.FPS
             time.sleep(sleep_time) #ensure playback speed matches framerate
-    artnet_sender.all_off()
+    #artnet_sender.all_off()
     prediction_buffer.clear()
 
 def prediction_buffer_remove_pause():
@@ -297,6 +297,7 @@ prediction_buffer = deque(maxlen=PREDICTION_BUFFER_MAXLEN)
 frame_count = 0
 prediction_counter = 0
 frames_to_remove = 0
+last_frame = 0
 
 InterspaceStateMachine.waiting = Waiting()
 InterspaceStateMachine.recording = Recording()

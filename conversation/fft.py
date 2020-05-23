@@ -26,7 +26,7 @@ def createBins():
     return(theBins)
 
 DEBUG = False
-SHOW_GRAPH = True
+SHOW_GRAPH = False
 FPS = 44.1
 UPDATE_FACTOR = 0.5 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
 
@@ -36,7 +36,7 @@ OSC_PORT = 8001
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 44100
-CHUNK = 1024 # int(RATE/FPS)
+CHUNK = 2048 # int(RATE/FPS)
 #FPS = RATE/CHUNK # ca 44.1
 START = 0
 N = CHUNK
