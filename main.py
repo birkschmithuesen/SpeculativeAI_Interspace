@@ -44,12 +44,12 @@ UDP_PORT = 10005
 OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
 
-LOAD_MODEL_WITHOUT_TRAINING = False # set False if you ant to load a model and continue to train it
+LOAD_MODEL_WITHOUT_TRAINING = True # set False if you ant to load a model and continue to train it
 LOAD_MODEL_TO_CONTINUE_TRAINING = False
-SAVE_MODEL = True
-LOAD_TRAININGSDATA = True
-INITIALIZE_NEW_NETWORK = True
-DO_TRAINING = True
+SAVE_MODEL = False
+LOAD_TRAININGSDATA = False
+INITIALIZE_NEW_NETWORK = False
+DO_TRAINING = False
 UPDATE_FACTOR = 0.2 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
 
 
