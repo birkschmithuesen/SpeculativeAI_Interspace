@@ -80,6 +80,7 @@ class SpectrumAnalyzer:
         self.binned = binned
         self.fft_bins_x = [str(x) for x in BINS]
         self.fft_bins_y = np.arange(len(BINS))
+        self.last_fft_bins_y = np.arange(len(BINS))
         self.wave_x = 0
         self.wave_y = 0
         self.spec_x = 0
@@ -155,6 +156,8 @@ class SpectrumAnalyzer:
         """
         self.fft()
         self.fft_bins_y = self.binn_fft()
+        self.fft_bins_y = np.asarray(self.fft_bins_y) * UPDATE_FACTOR + self.last_fft_bins_y *(1 - UPDATE_FACTOR)
+        self.last_fft_bins_y = self.fft_bins_y
 
 
     def binn_fft(self):
