@@ -26,7 +26,7 @@ def createBins():
     return(theBins)
 
 DEBUG = False
-SHOW_GRAPH = False
+SHOW_GRAPH = True
 FPS = 44.1
 UPDATE_FACTOR = 0.5 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
 

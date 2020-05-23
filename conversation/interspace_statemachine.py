@@ -25,7 +25,7 @@ from pythonosc import osc_server
 import numpy as np
 from conversation import fft, neuralnet_audio, interspace_artnet
 
-LIVE_REPLAY = False # replay the predictions live without buffer
+LIVE_REPLAY = True # replay the predictions live without buffer
 
 UDP_IP = '127.0.0.1'
 UDP_PORT = 10005
@@ -151,7 +151,7 @@ def soundvector_postprocessing(prediction_vector):
     prediction_vector[6] = prediction_vector[6] + random.uniform(VOLUME_RANDOMIZER_START, VOLUME_RANDOMIZER_END)
     return prediction_vector
 
-def add_activation_to_buffer():
+def add_random_activation_to_buffer():
     """
     adds random activation into the buffer
     """
@@ -185,13 +185,15 @@ class Waiting(State):
     def run(self, input=None):
         pass
     def next(self, fft_frame):
+        print("Hi")
         global activation_counter
-        if activation_counter >= PAUSE_LENGTH_FOR_RANDOM_ACTIVATION:
-            add_activation_to_buffer()
+        if activation_counter >= PAUSE_LENGTH_FOR_RANDOM_ACTIVATION and not LIVE_REPLAY:
+            add_random_activation_to_buffer()
             activation_counter = 0
+            print("Transitioned: Replaying (random activation)")
             return InterspaceStateMachine.replaying
         frame_contains_silence, _pause_detected = contains_silence_pause_detected(fft_frame)
-        if frame_contains_silence:
+        if frame_contains_silence and not LIVE_REPLAY:
             activation_counter += 1
             return InterspaceStateMachine.waiting
         activation_counter = 0
@@ -215,6 +217,7 @@ class Recording(State):
             prediction_counter += 1
         if LIVE_REPLAY:
             random_value = 1
+            should_increase_length = 0
         else:
             random_value = random.randint(
                 MESSAGE_RANDOMIZER_START, MESSAGE_RANDOMIZER_END)
@@ -248,6 +251,7 @@ class Recording(State):
             prediction_counter = frames_to_remove = activation_counter = 0
             return InterspaceStateMachine.replaying
         else:
+            print("recording again")
             return InterspaceStateMachine.recording
 
 class Replaying(State):
@@ -299,6 +303,8 @@ InterspaceStateMachine.recording = Recording()
 InterspaceStateMachine.replaying = Replaying()
 
 if LIVE_REPLAY:
+    print("Activated LIVE_REPLAY mode")
     def new_next_recording(fft_frame):
+        ledoutput()
         return InterspaceStateMachine.recording
     InterspaceStateMachine.recording.next = new_next_recording
