@@ -94,7 +94,7 @@ def ledoutput():
         if not LIVE_REPLAY:
             sleep_time = 1.0/fft.FPS
             time.sleep(sleep_time) #ensure playback speed matches framerate
-    #artnet_sender.all_off()
+            artnet_sender.all_off()
     prediction_buffer.clear()
 
 def prediction_buffer_remove_pause():
@@ -285,14 +285,14 @@ class InterspaceStateMachine(StateMachine):
         initialize_server()
         neuralnet_audio.run()
 
+fft_buffer = []
+frame_received_semaphore = threading.Semaphore(0)
 spectrum_analyzer = fft.SpectrumAnalyzer(fft_callback_function, binned=True, send_osc=True)
 artnet_sender = interspace_artnet.InterspaceArtnet()
 pause_counter = 0
 activation_counter = 0
-frame_received_semaphore = threading.Semaphore(0)
 pause_event = threading.Event()
 replay_finished_event = threading.Event()
-fft_buffer = []
 prediction_buffer = deque(maxlen=PREDICTION_BUFFER_MAXLEN)
 frame_count = 0
 prediction_counter = 0

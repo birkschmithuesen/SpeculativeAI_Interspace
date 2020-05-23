@@ -45,7 +45,10 @@ BINS = createBins() #[(a, a+198) for a in range(30, 6000, 199)]
 #BINS = [(a, a+82) for a in range(20, 10020, 83)]
 
 if SHOW_GRAPH:
-    import matplotlib.pyplot as plt
+    import matplotlib
+    matplotlib.use('TkAgg')
+    from matplotlib import pyplot as plt
+
 
 def debug(str):
     if DEBUG:
@@ -93,7 +96,7 @@ class SpectrumAnalyzer:
             self.client = udp_client.SimpleUDPClient(OSC_IP, OSC_PORT)
         # Main loop
         if SHOW_GRAPH:
-            plt.ion()
+            self.init_plot()
         if DEBUG:
             self.log = dict()
 
@@ -184,29 +187,43 @@ class SpectrumAnalyzer:
         average = bin_sum / (i+1)
         return average
 
-    def graphplot(self):
+    def init_plot(self):
         """
-        draw graph of audio and fft data
+        intialize the pyplot
         """
-        plt.clf()
+        """
         # wave
         plt.subplot(311)
         plt.plot(self.wave_x, self.wave_y)
         plt.axis([START, START + N, -0.5, 0.5])
         plt.xlabel("time [sample]")
         plt.ylabel("amplitude")
+        """
         # spectrum
-        plt.subplot(312)
-        axes = plt.gca()
-        axes.set_ylim([0,30])
-        axes.xaxis.set_major_locator(plt.MaxNLocator(4))
+        self.fig, self.ax = plt.subplots()
+        self.ax.set_ylim([0,30])
+        self.ax.xaxis.set_major_locator(plt.MaxNLocator(4))
         plt.xlabel("frequency [Hz]")
         plt.ylabel("amplitude spectrum")
+        self.fig.canvas.draw()
         if self.binned:
-            plt.plot(self.fft_bins_x, self.fft_bins_y, marker='o', linestyle='-')
+            self.line, = self.ax.plot(self.fft_bins_x, self.fft_bins_y, marker='o', linestyle='-')
         else:
-            plt.plot(self.spec_x, self.spec_y, marker='o', linestyle='-')
-        plt.pause(.01)
+            self.line, = self.ax.plot(self.spec_x, self.spec_y, marker='o', linestyle='-')
+        plt.show(block=False)
+
+    def graphplot(self):
+        """
+        draw graph of audio and fft data
+        """
+        if self.binned:
+            self.line.set_ydata(self.fft_bins_y)
+        else:
+            self.line.set_ydata(self.spec_y)
+        self.ax.draw_artist(self.ax.patch)
+        self.ax.draw_artist(self.line)
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()
 
     def quit(self):
         """
