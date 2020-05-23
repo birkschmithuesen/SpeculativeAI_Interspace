@@ -26,7 +26,7 @@ def createBins():
     return(theBins)
 
 DEBUG = False
-SHOW_GRAPH = False
+SHOW_GRAPH = True
 FPS = 44.1
 UPDATE_FACTOR = 0.5 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
 
@@ -46,7 +46,7 @@ BINS = createBins() #[(a, a+198) for a in range(30, 6000, 199)]
 
 if SHOW_GRAPH:
     import matplotlib
-    matplotlib.use('TkAgg')
+    matplotlib.use('QT5Agg')
     from matplotlib import pyplot as plt
 
 
@@ -191,25 +191,26 @@ class SpectrumAnalyzer:
         """
         intialize the pyplot
         """
-        """
-        # wave
-        plt.subplot(311)
-        plt.plot(self.wave_x, self.wave_y)
-        plt.axis([START, START + N, -0.5, 0.5])
-        plt.xlabel("time [sample]")
-        plt.ylabel("amplitude")
-        """
         # spectrum
-        self.fig, self.ax = plt.subplots()
-        self.ax.set_ylim([0,30])
-        self.ax.xaxis.set_major_locator(plt.MaxNLocator(4))
+        self.fig, (self.ax1, self.ax2) = plt.subplots(2)
+        self.fig.suptitle('Discrete Fourier transform')
+        self.ax1.set_ylim([0,30])
+        self.ax1.xaxis.set_major_locator(plt.MaxNLocator(4))
         plt.xlabel("frequency [Hz]")
         plt.ylabel("amplitude spectrum")
         self.fig.canvas.draw()
         if self.binned:
-            self.line, = self.ax.plot(self.fft_bins_x, self.fft_bins_y, marker='o', linestyle='-')
+            self.line, = self.ax1.plot(self.fft_bins_x, self.fft_bins_y, marker='o', linestyle='-')
         else:
-            self.line, = self.ax.plot(self.spec_x, self.spec_y, marker='o', linestyle='-')
+            self.line, = self.ax1.plot(self.spec_x, self.spec_y, marker='o', linestyle='-')
+
+        # wave
+        self.line2, = self.ax2.plot(self.wave_x, self.wave_y)
+        plt.axis([START, START + N, -0.5, 0.5])
+        plt.xlabel("time [sample]")
+        plt.ylabel("amplitude")
+        self.fig.canvas.draw()
+
         plt.show(block=False)
 
     def graphplot(self):
@@ -220,9 +221,12 @@ class SpectrumAnalyzer:
             self.line.set_ydata(self.fft_bins_y)
         else:
             self.line.set_ydata(self.spec_y)
-        self.ax.draw_artist(self.ax.patch)
-        self.ax.draw_artist(self.line)
-        self.fig.canvas.draw()
+        self.line2.set_ydata(self.wave_y)
+        self.ax1.draw_artist(self.ax1.patch)
+        self.ax1.draw_artist(self.line)
+        self.ax2.draw_artist(self.ax2.patch)
+        self.ax2.draw_artist(self.line2)
+        self.fig.canvas.update()
         self.fig.canvas.flush_events()
 
     def quit(self):
