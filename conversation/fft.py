@@ -200,13 +200,13 @@ class SpectrumAnalyzer:
         plt.ylabel("amplitude spectrum")
         self.fig.canvas.draw()
         if self.binned:
-            self.line, = self.ax1.plot(self.fft_bins_x, self.fft_bins_y, marker='o', linestyle='-')
+            self.line, = self.ax1.plot(self.fft_bins_x, self.fft_bins_y, linestyle='-', color="red")
         else:
-            self.line, = self.ax1.plot(self.spec_x, self.spec_y, marker='o', linestyle='-')
+            self.line, = self.ax1.plot(self.spec_x, self.spec_y, marker='o', linestyle='dotted', color="red")
 
         # wave
-        self.line2, = self.ax2.plot(self.wave_x, self.wave_y)
-        plt.axis([START, START + N, -0.5, 0.5])
+        self.line2, = self.ax2.plot(self.wave_x, self.wave_y, color="black", linewidth="0.5")
+        plt.axis([START, START + N, -1, 1])
         plt.xlabel("time [sample]")
         plt.ylabel("amplitude")
         self.fig.canvas.draw()
@@ -223,8 +223,8 @@ class SpectrumAnalyzer:
             self.line.set_ydata(self.spec_y)
         self.line2.set_ydata(self.wave_y)
         self.ax1.draw_artist(self.ax1.patch)
-        self.ax1.draw_artist(self.line)
         self.ax2.draw_artist(self.ax2.patch)
+        self.ax1.draw_artist(self.line)
         self.ax2.draw_artist(self.line2)
         self.fig.canvas.update()
         self.fig.canvas.flush_events()
