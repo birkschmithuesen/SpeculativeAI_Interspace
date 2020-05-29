@@ -210,7 +210,7 @@ class SpectrumAnalyzer:
         plt.xlabel("time [sample]")
         plt.ylabel("amplitude")
         self.fig.canvas.draw()
-
+        plt.get_current_fig_manager().window.setGeometry(639, 0, 640, 1024)
         plt.show(block=False)
 
     def graphplot(self):
