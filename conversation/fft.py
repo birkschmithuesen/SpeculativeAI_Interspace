@@ -3,6 +3,7 @@ This module implements an binned fft spectrum analyzer
 """
 
 import os
+import socket
 import numpy as np
 import pyaudio
 import time
@@ -193,7 +194,7 @@ class SpectrumAnalyzer:
         """
         # spectrum
         self.fig, (self.ax1, self.ax2) = plt.subplots(2)
-        self.fig.suptitle('Discrete Fourier transform')
+        self.fig.suptitle('Discrete Fourier transform – Host: {}'.format(socket.gethostbyname(socket.gethostname())))
         self.ax1.set_ylim([0,30])
         self.ax1.xaxis.set_major_locator(plt.MaxNLocator(4))
         plt.xlabel("frequency [Hz]")
