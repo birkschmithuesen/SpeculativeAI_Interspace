@@ -19,6 +19,7 @@ import socket
 import struct
 import math
 import time
+import datetime
 from collections import deque
 from pythonosc import udp_client
 from pythonosc import osc_server
@@ -81,7 +82,9 @@ def ledoutput():
     frames = [x[0] for x in prediction_buffer]
     #last_frame = last_frame.astype(int)
     counter = 0
+    start_time = datetime.datetime.now()
     for frame in frames:
+        
         #conversion to INT with list
         #int_frame = [int(x * 255) for x in frame]
         #conversion to INT with numpy
@@ -91,11 +94,15 @@ def ledoutput():
         int_frame = int_frame.astype(int)
         int_frame = int_frame.clip(0, 255)
         artnet_sender.send_brightness_buffer(int_frame)
+        time_diff = datetime.datetime.now() - start_time
+        time_diff = time_diff.total_seconds()
         print("Sending frame ", counter, "/", len(frames))
         counter = counter+1
         if not LIVE_REPLAY:
-            sleep_time = 1.0/fft.FPS
-            time.sleep(sleep_time) #ensure playback speed matches framerate
+            sleep_time = 1.0/fft.FPS - time_diff
+            if sleep_time > 0:
+                time.sleep(sleep_time) #ensure playback speed matches framerate
+        start_time = datetime.datetime.now()     
     if not LIVE_REPLAY:
         artnet_sender.all_off()
     prediction_buffer.clear()

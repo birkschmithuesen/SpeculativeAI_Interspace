@@ -11,6 +11,7 @@ import sys
 from pythonosc import osc_message_builder
 from pythonosc import udp_client
 import math
+import collections
 import csv
 
 def createBins():
@@ -26,7 +27,7 @@ def createBins():
         theBins.append(theRange)
     return(theBins)
 
-DEBUG = False
+DEBUG = True #False
 SHOW_GRAPH = True
 FPS = 35
 UPDATE_FACTOR = 0.5 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
@@ -37,8 +38,8 @@ OSC_PORT = 8001
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 44100
-CHUNK = 2048 # int(RATE/FPS)
-#FPS = RATE/CHUNK # ca 44.1
+CHUNK = int(RATE/FPS)#2048
+FPS = RATE/CHUNK # ca 44.1
 START = 0
 N = CHUNK
 WINDOW = np.hanning(N)
@@ -72,6 +73,9 @@ class SpectrumAnalyzer:
     """
 
     def __init__(self, fft_function, binned=True, send_osc=True):
+        if DEBUG:
+            self.log = dict()
+            self.fps_deque = collections.deque(maxlen=120)
         self.fft_callback = fft_function
         self.pyaudio = pyaudio.PyAudio()
         self.stream = self.pyaudio.open(format=FORMAT,
@@ -98,8 +102,6 @@ class SpectrumAnalyzer:
         # Main loop
         if SHOW_GRAPH:
             self.init_plot()
-        if DEBUG:
-            self.log = dict()
 
     def stream_callback(self, in_data, frame_count, time_info, status_flags):
         """
@@ -111,8 +113,13 @@ class SpectrumAnalyzer:
         fps = int(1.0 / time_delta)
         self.last_frame_timestamp = time.time()
         if DEBUG:
+            self.fps_deque.append(fps)
+            avg_fps = 0
+            for frame_fps in self.fps_deque:
+                avg_fps += frame_fps
+            avg_fps /= len(self.fps_deque)
             self.log_fps(self.last_frame_timestamp, fps)
-            sys.stdout.write("\r{} FPS".format(fps))
+            sys.stdout.write("\r{} FPS".format(avg_fps))
             sys.stdout.flush()
         self.data = np.frombuffer(in_data, dtype=np.float32)
         if self.binned:
@@ -261,7 +268,7 @@ class SpectrumAnalyzer:
 
     def log_entry(self, timestamp, entry):
         """
-        log abitrary information contained in an dict.
+        log arbitrary information contained in an dict.
         """
         if timestamp in self.log:
             self.log[timestamp].update(entry)
