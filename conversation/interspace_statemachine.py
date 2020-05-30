@@ -80,6 +80,7 @@ def ledoutput():
     global last_frame
     frames = [x[0] for x in prediction_buffer]
     #last_frame = last_frame.astype(int)
+    counter = 0
     for frame in frames:
         #conversion to INT with list
         #int_frame = [int(x * 255) for x in frame]
@@ -90,11 +91,13 @@ def ledoutput():
         int_frame = int_frame.astype(int)
         int_frame = int_frame.clip(0, 255)
         artnet_sender.send_brightness_buffer(int_frame)
-        print("Sending frame")
+        print("Sending frame ", counter, "/", len(frames))
+        counter = counter+1
         if not LIVE_REPLAY:
             sleep_time = 1.0/fft.FPS
             time.sleep(sleep_time) #ensure playback speed matches framerate
-            artnet_sender.all_off()
+    if not LIVE_REPLAY:
+        artnet_sender.all_off()
     prediction_buffer.clear()
 
 def prediction_buffer_remove_pause():
@@ -185,12 +188,11 @@ class Waiting(State):
     def run(self, input=None):
         pass
     def next(self, fft_frame):
-        print("Hi")
         global activation_counter
         if activation_counter >= PAUSE_LENGTH_FOR_RANDOM_ACTIVATION and not LIVE_REPLAY:
             add_random_activation_to_buffer()
             activation_counter = 0
-            print("Transitioned: Replaying (random activation)")
+            print("Transitioned: Replaying")
             return InterspaceStateMachine.replaying
         frame_contains_silence, _pause_detected = contains_silence_pause_detected(fft_frame)
         if frame_contains_silence and not LIVE_REPLAY:

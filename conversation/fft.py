@@ -28,7 +28,7 @@ def createBins():
 
 DEBUG = False
 SHOW_GRAPH = True
-FPS = 44.1
+FPS = 35
 UPDATE_FACTOR = 0.5 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
 
 OSC_IP = "127.0.0.1"
