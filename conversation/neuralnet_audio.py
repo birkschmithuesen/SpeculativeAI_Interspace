@@ -1,6 +1,9 @@
 """
 The class contains a neural net for predicting 13824 led
 brightness values from an 30 bin fft vector input.
+
+If there is a model.h5 file in the root, the model will be used.
+If there is no pre trained model available, the system tries to load the trainingdata (trngsdata.txt) to create a new model
 """
 import os
 from tensorflow import Session, ConfigProto
@@ -17,108 +20,102 @@ import numpy as np
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the computed
 
-MODEL_FILE_PATH = './model.h5'
-MODEL_TRAININGS_DATA_FILE_PATH = 'trgsdata.txt'
+MODEL_LOAD_FILE_PATH = './model.h5'
+MODEL_SAVE_FILE_PATH = './model_new.h5'
+MODEL_TRAININGS_DATA_FILE_PATH = './trngsdata.txt'
 
-LOAD_MODEL = os.path.isfile(MODEL_FILE_PATH)
+LOAD_MODEL = os.path.isfile(MODEL_LOAD_FILE_PATH)
 SAVE_MODEL = not LOAD_MODEL
 
 INPUT_DIM = 32
 BATCH_SIZE = 32
 EPOCHS = 30
 INITIAL_EPOCHS = 150
-
 HIDDEN1_DIM = 512
-HIDDEN2_DIM = 4096
+#HIDDEN2_DIM = 4096
 OUTPUT_DIM = 13824
+LEARNING_RATE = 1.2
 
 config = ConfigProto(log_device_placement=True)
 config.gpu_options.allow_growth = True
 config.gpu_options.per_process_gpu_memory_fraction = 0.8
 sess = Session(config=config)
 model = Sequential()
+training_input = 0
+training_output = 0
 
 def load_model_from_file():
     """
     Load model from file
     """
     global model
-    model = load_model(MODEL_FILE_PATH)
-    model._make_predict_function()
+    model = load_model(MODEL_LOAD_FILE_PATH)
     print('Loaded saved model from file')
-
 
 def build_model():
     """
-    Return the model
+    Initialize a new network
     """
-    run()
-    return model
+    my_init=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
+    model.add(Dense(HIDDEN1_DIM, activation='sigmoid', input_dim=INPUT_DIM, kernel_initializer=my_init, bias_initializer=my_init))
+    #model.add(Dense(HIDDEN2_DIM, activation='sigmoid', input_dim=HIDDEN1_DIM, kernel_initializer=my_init, bias_initializer=my_init))
+    model.add(Dense(OUTPUT_DIM, activation='sigmoid',kernel_initializer=my_init, bias_initializer=my_init))
+    sgd = SGD(lr=LEARNING_RATE, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
-def train_model():
+def make_prediction_function():
+    """
+    Make the prediction function
+    """
+    global model
+    model._make_predict_function()
+
+def load_trainingsdata():
     """
     loading the trainingsdata from a textfile. Convert the
     trainingpoints in the right dimension: One line in the text file is
     one trainingpoint with 30 FFT values and 13824 LED values, separated by tabulators
     """
-    global model
+    global training_input, training_output
     #import fft and led input data
     file_name = MODEL_TRAININGS_DATA_FILE_PATH
     file = open(file_name)
     print('Loading Trainingsdata from File:', file_name,'  ...')
     values = np.loadtxt(file_name, dtype='float32')
     print('Trainingsdata points: ', values.shape[0], "\n")
-
     #split into input and outputs
     training_input, training_output = values[:,:-OUTPUT_DIM], values[:,INPUT_DIM:]
     print('training_input shape: ', training_input.shape, 'training_output shape: ', training_output.shape)
-    my_init = keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
-    model.add(Dense(HIDDEN1_DIM, activation='sigmoid', input_dim=INPUT_DIM, kernel_initializer=my_init, bias_initializer=my_init))
-    model.add(Dense(HIDDEN2_DIM, activation='sigmoid', input_dim=HIDDEN1_DIM, kernel_initializer=my_init, bias_initializer=my_init))
-    model.add(Dense(OUTPUT_DIM, activation='sigmoid',kernel_initializer=my_init, bias_initializer=my_init))
-    sgd = SGD(lr=0.06, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
-    model.fit(training_input, training_output, epochs=INITIAL_EPOCHS, batch_size=32, shuffle=True)
+
+
+def train_model():
+    """
+    trains the model with INITIAL_EPOCHS
+    """
+    global model, training_input, training_output
+    model.fit(training_input, training_output, epochs=INITIAL_EPOCHS, batch_size=BATCH_SIZE, shuffle=True)
     model._make_predict_function()
     model.summary()
-    print('Loaded new model')
+    print('Initial training finished...')
 
-def new_model_handler(unused_addr, args):
-    """
-    this function should reinitialize the model, to start the training from scratch again.
-    ToDo: make it work. Probably the crash is caused because of the multi-threading?
-    """
-    global model
-    kerasBackend.clear_session()
-    my_init = keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
 
-    model.add(Dense(6144, activation='sigmoid', input_dim=30, kernel_initializer=my_init,
-                    bias_initializer=my_init))
-    model.add(Dense(OUTPUT_DIM, activation='sigmoid',kernel_initializer=my_init,
-                    bias_initializer=my_init))
-    sgd = SGD(lr=0.06, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
-    model.fit(training_input, training_output, epochs=1, batch_size=32, shuffle=True)
-    model._make_predict_function()
-    print('Loaded new model')
-
-def train_handler(unused_addr, args):
+def continue_training():
     """
-    neural network trainer
+    trains the model with EPOCHS
     """
-    global model
+    global model, training_input, training_output
     model.fit(training_input, training_output, epochs=EPOCHS, batch_size=BATCH_SIZE, shuffle=True)
     model._make_predict_function()
     print('training finished...')
     print('')
 
-def frame_count_handler(unused_addr, args):
+def save_model():
     """
-    a function to synchronize for recording the output of the neural network
+    saves the model to disk
     """
-    #print('received frameCoount: ', args)
-    global frame_count
-    frame_count = args
+    model.save(MODEL_SAVE_FILE_PATH)
+    print('Saved new model to path: ', MODEL_SAVE_FILE_PATH)
+    model.summary()
 
 def run():
     """
@@ -127,12 +124,13 @@ def run():
     global model
     if LOAD_MODEL:
         load_model_from_file()
+        make_prediction_function()
     else:
+        build_model()
+        load_trainingsdata()
         train_model()
     if SAVE_MODEL:
-        model.save(MODEL_FILE_PATH)
-        print('Saved new model to path: ', MODEL_FILE_PATH)
-        model.summary()
+        save_model()
 
 if __name__ == "__main__":
     run()

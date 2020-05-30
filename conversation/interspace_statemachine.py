@@ -25,7 +25,7 @@ from pythonosc import osc_server
 import numpy as np
 from conversation import fft, neuralnet_audio, interspace_artnet
 
-LIVE_REPLAY = False # replay the predictions live without buffer
+LIVE_REPLAY = True # replay the predictions live without buffer
 
 UDP_IP = '127.0.0.1'
 UDP_PORT = 10005
@@ -60,9 +60,9 @@ def initialize_server():
     parser.add_argument("--port", type=int, default=OSC_LISTEN_PORT, help="The port to listen on")
     args = parser.parse_args()
     dispatcher = dispatcher.Dispatcher()
-    dispatcher.map("/Playback/Recorder/frameCount", neuralnet_audio.frame_count_handler)
-    dispatcher.map("/train", neuralnet_audio.train_handler)
-    dispatcher.map("/newModel", neuralnet_audio.new_model_handler)
+    dispatcher.map("/train", neuralnet_audio.continue_training)
+    dispatcher.map("/save_model", neuralnet_audio.save_model)
+
     try:
         server = osc_server.ThreadingOSCUDPServer((args.ip, args.port), dispatcher)
         server_thread=threading.Thread(target=server.serve_forever, daemon=True)
