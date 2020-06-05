@@ -26,7 +26,7 @@ from pythonosc import osc_server
 import numpy as np
 from conversation import fft, neuralnet_audio, interspace_artnet
 
-LIVE_REPLAY = True # replay the predictions live without buffer
+LIVE_REPLAY = False # replay the predictions live without buffer
 
 UDP_IP = '127.0.0.1'
 UDP_PORT = 10005
@@ -84,7 +84,7 @@ def ledoutput():
     counter = 0
     start_time = datetime.datetime.now()
     for frame in frames:
-        
+
         #conversion to INT with list
         #int_frame = [int(x * 255) for x in frame]
         #conversion to INT with numpy
@@ -102,7 +102,7 @@ def ledoutput():
             sleep_time = 1.0/fft.FPS - time_diff
             if sleep_time > 0:
                 time.sleep(sleep_time) #ensure playback speed matches framerate
-        start_time = datetime.datetime.now()     
+        start_time = datetime.datetime.now()
     if not LIVE_REPLAY:
         artnet_sender.all_off()
     prediction_buffer.clear()
