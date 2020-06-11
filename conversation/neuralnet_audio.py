@@ -27,10 +27,12 @@ MODEL_TRAININGS_DATA_FILE_PATH = './trngsdata.txt'
 LOAD_MODEL = os.path.isfile(MODEL_LOAD_FILE_PATH)
 SAVE_MODEL = not LOAD_MODEL
 
+CONTINUE_TRAINING = False
+
 INPUT_DIM = 32
 BATCH_SIZE = 32
-EPOCHS = 30
-INITIAL_EPOCHS = 150
+EPOCHS = 250
+INITIAL_EPOCHS = 300
 HIDDEN1_DIM = 512
 #HIDDEN2_DIM = 4096
 OUTPUT_DIM = 13824
@@ -122,13 +124,19 @@ def run():
     Executes model loading/training/saving
     """
     global model
-    if LOAD_MODEL:
-        load_model_from_file()
-        make_prediction_function()
-    else:
-        build_model()
+    if CONTINUE_TRAINING:
         load_trainingsdata()
-        train_model()
+        load_model_from_file()
+        continue_training()
+        save_model()
+    else:
+        if LOAD_MODEL:
+            load_model_from_file()
+            make_prediction_function()
+        else:
+            build_model()
+            load_trainingsdata()
+            train_model()
     if SAVE_MODEL:
         save_model()
 
