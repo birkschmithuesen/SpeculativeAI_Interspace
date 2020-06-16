@@ -35,14 +35,16 @@ OSC_LISTEN_PORT = 8000
 
 PAUSE_LENGTH_FOR_RANDOM_ACTIVATION = 300 # length in frames in waiting state triggering random activation
 MINIMUM_MESSAGE_LENGTH  = 25 # ignore all messages below this length
-PAUSE_LENGTH = 40 # length in frames of silence that triggers pause event
+PAUSE_LENGTH = 20 # length in frames of silence that triggers pause event
 PAUSE_SILENCE_THRESH = 25 # Threshhold defining pause if sum(fft) is below the value
 MESSAGE_RANDOMIZER_START = 0 # set the minimum times, how often a frame will be written into the buffer
 MESSAGE_RANDOMIZER_END = 0 # set the maximum times, how often a frame will be written into the buffer
 VOLUME_RANDOMIZER_START = 0 # set the minimum value, how much the volume of the different synths will be changed by chance
 VOLUME_RANDOMIZER_END = 0 # set the maximum value, how much the volume of the different synths will be changed by chance
 PREDICTION_BUFFER_MAXLEN = 4410 # 10 seconds * 44.1 fps
-TRACE = 0.8 #sets the factor how much the actual frame will be mixed with the last one before sendin to Artnet Output. This is the same on the output side as done in the FFT Class with the UPDATE_FACTOR
+TRACE = 1 #sets the factor how much the actual frame will be mixed with the last one before sendin to Artnet Output. This is the same on the output side as done in the FFT Class with the UPDATE_FACTOR
+SPEED_BOOST = 15 #fastens the playback speed. Is needed in SAI communication, because messages tend to get longer, because of fade outs and stuff
+MAX_BRIGHTNESS = 100 #sets the maximum brightness. All values will be clamped there. Physical maximum is 255
 
 def fft_callback_function(fft_data):
     """
@@ -92,18 +94,20 @@ def ledoutput():
         int_frame = int_frame * TRACE + last_frame *(1 - TRACE)
         last_frame = int_frame
         int_frame = int_frame.astype(int)
-        int_frame = int_frame.clip(0, 255)
+        int_frame = int_frame.clip(0, MAX_BRIGHTNESS)
         artnet_sender.send_brightness_buffer(int_frame)
         time_diff = datetime.datetime.now() - start_time
         time_diff = time_diff.total_seconds()
         print("Sending frame ", counter, "/", len(frames))
         counter = counter+1
         if not LIVE_REPLAY:
-            sleep_time = 1.0/fft.FPS - time_diff
+            sleep_time = 1.0/(fft.FPS + SPEED_BOOST) - time_diff
             if sleep_time > 0:
                 time.sleep(sleep_time) #ensure playback speed matches framerate
         start_time = datetime.datetime.now()
     if not LIVE_REPLAY:
+        artnet_sender.all_off()
+        time.sleep(0.1)
         artnet_sender.all_off()
     prediction_buffer.clear()
 

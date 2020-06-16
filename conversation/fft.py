@@ -30,7 +30,7 @@ def createBins():
 DEBUG = False
 SHOW_GRAPH = True
 FPS = 35
-UPDATE_FACTOR = 0.5 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
+UPDATE_FACTOR = 0.2 # factor of how much a ne frame will be multiplied into the prediction buffer. 1 => 100%, 0.5 => 50%
 
 OSC_IP = "127.0.0.1"
 OSC_PORT = 8001
@@ -39,7 +39,7 @@ FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 44100
 CHUNK = int(RATE/FPS)#2048
-FPS = RATE/CHUNK # ca 44.1
+FPS = RATE/CHUNK # ca 44.1 - manually added some speed, because in coimmunication messages always get longer
 START = 0
 N = CHUNK
 WINDOW = np.hanning(N)

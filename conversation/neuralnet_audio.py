@@ -32,11 +32,11 @@ CONTINUE_TRAINING = False
 INPUT_DIM = 32
 BATCH_SIZE = 32
 EPOCHS = 250
-INITIAL_EPOCHS = 300
+INITIAL_EPOCHS = 50
 HIDDEN1_DIM = 512
 #HIDDEN2_DIM = 4096
 OUTPUT_DIM = 13824
-LEARNING_RATE = 1.2
+LEARNING_RATE = 3.2
 
 config = ConfigProto(log_device_placement=True)
 config.gpu_options.allow_growth = True
