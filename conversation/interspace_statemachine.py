@@ -33,9 +33,9 @@ UDP_PORT = 10005
 OSC_LISTEN_IP = "0.0.0.0" # =>listening from any IP
 OSC_LISTEN_PORT = 8000
 
-PAUSE_LENGTH_FOR_RANDOM_ACTIVATION = 300 # length in frames in waiting state triggering random activation
-MINIMUM_MESSAGE_LENGTH  = 25 # ignore all messages below this length
-PAUSE_LENGTH = 20 # length in frames of silence that triggers pause event
+PAUSE_LENGTH_FOR_RANDOM_ACTIVATION = 500 # length in frames in waiting state triggering random activation
+MINIMUM_MESSAGE_LENGTH  = 8 # ignore all messages below this length
+PAUSE_LENGTH = 8 # length in frames of silence that triggers pause event
 PAUSE_SILENCE_THRESH = 25 # Threshhold defining pause if sum(fft) is below the value
 MESSAGE_RANDOMIZER_START = 0 # set the minimum times, how often a frame will be written into the buffer
 MESSAGE_RANDOMIZER_END = 0 # set the maximum times, how often a frame will be written into the buffer
@@ -169,7 +169,7 @@ def add_random_activation_to_buffer():
     """
     adds random activation into the buffer
     """
-    message_length = random.randint(30, 90)
+    message_length = random.randint(10, 40)
     for i in range(message_length):
         factor = random.randint(0,70)
         factor = factor/100.0
