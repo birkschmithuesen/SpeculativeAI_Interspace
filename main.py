@@ -5,6 +5,7 @@ from keras.utils.vis_utils import model_to_dot
 from keras.layers import Dense, LSTM, Dropout, Activation
 from keras.optimizers import SGD
 from keras.models import model_from_json
+from keras.models import load_model
 from keras import backend as kerasBackend
 
 import argparse
@@ -27,6 +28,9 @@ from numpy import loadtxt
 UDP_IP = 'localhost'
 UDP_PORT=10005
 
+MAKE_TRAINING = False
+
+
 model = Sequential()
 
 fft=[]
@@ -36,7 +40,7 @@ e2 = threading.Event()
 
 
 def fft_handler(unused_addr, args_1,args_2,args_3,args_4,args_5,args_6,args_7,args_8,args_9,args_10,args_11,args_12,args_13,args_14,args_15,args_16,args_17,args_18,args_19,args_20, args_21, args_22,args_23,args_24,args_25,args_26,args_27,args_28,args_29,args_30):
-    #print('received ftt paket. list-length: ',len(fft), '   first arg: ', args_1)
+    print('received ftt paket. list-length: ',len(fft), '   first arg: ', args_1)
     fft.append(args_1)
     fft.append(args_2)
     fft.append(args_3)
@@ -99,7 +103,7 @@ def initialize_server():
   from pythonosc import dispatcher
   parser = argparse.ArgumentParser()
   parser.add_argument("--ip",
-      default="2.0.0.1", help="The ip to listen on")
+      default="0.0.0.0", help="The ip to listen on")
   parser.add_argument("--port",
       type=int, default=8000, help="The port to listen on")
   args = parser.parse_args()
@@ -154,29 +158,34 @@ def ledoutput():
 #TODO: the program will crash at this point if there is no network card found with the IP 2.0.0.1
 initialize_server()
 
-#import fft and led input data
-file_name='traingsdata.txt'
-file = open(file_name)
-print('Loading Trainingsdata from File:', file_name,'  ...')
-values=loadtxt(file_name, dtype='float32')
-print('Trainingsdata points: ',values.shape[0])
-print()
+if MAKE_TRAINING:
+    #import fft and led input data
+    file_name='traingsdata.txt'
+    file = open(file_name)
+    print('Loading Trainingsdata from File:', file_name,'  ...')
+    values=loadtxt(file_name, dtype='float32')
+    print('Trainingsdata points: ',values.shape[0])
+    print()
 
-#split into input and outputs
-train_X, train_y = values[:,:-13824], values[:,30:]
-print('Train_X: ', train_X.shape, 'Train_y: ', train_y.shape)
+    #split into input and outputs
+    train_X, train_y = values[:,:-13824], values[:,30:]
+    print('Train_X: ', train_X.shape, 'Train_y: ', train_y.shape)
 
-# LOAD NN MODEL
-my_init=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
-model.add(Dense(6144, activation='sigmoid', input_dim=30, kernel_initializer=my_init, bias_initializer=my_init))
-model.add(Dense(13824, activation='sigmoid',kernel_initializer=my_init, bias_initializer=my_init))
+    # LOAD NN MODEL
+    my_init=keras.initializers.RandomNormal(mean=0.0, stddev=0.05, seed=None)
+    model.add(Dense(6144, activation='sigmoid', input_dim=30, kernel_initializer=my_init, bias_initializer=my_init))
+    model.add(Dense(13824, activation='sigmoid',kernel_initializer=my_init, bias_initializer=my_init))
 
-sgd = SGD(lr=0.06, decay=1e-6, momentum=0.9, nesterov=True)
-model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
+    sgd = SGD(lr=0.06, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
-model.fit(train_X, train_y, epochs=1, batch_size=32, shuffle=True)
-model._make_predict_function()
-print('Loaded new model')
+    model.fit(train_X, train_y, epochs=30, batch_size=32, shuffle=True)
+    model._make_predict_function()
+    model.save("model.h5")
+    print('Saved model')
+else:
+    model = keras.models.load_model("model.h5")
+    print('Loaded saved model')
 
 # we have two threads in the main loop:
 # t1 is sending the visual output data via OSC to the JAVA program that is displaying it on the visual object
