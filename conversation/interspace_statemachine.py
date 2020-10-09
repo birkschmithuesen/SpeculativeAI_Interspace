@@ -44,7 +44,7 @@ VOLUME_RANDOMIZER_END = 0 # set the maximum value, how much the volume of the di
 PREDICTION_BUFFER_MAXLEN = 4410 # 10 seconds * 44.1 fps
 TRACE = 1 #sets the factor how much the actual frame will be mixed with the last one before sendin to Artnet Output. This is the same on the output side as done in the FFT Class with the UPDATE_FACTOR
 SPEED_BOOST = 15 #fastens the playback speed. Is needed in SAI communication, because messages tend to get longer, because of fade outs and stuff
-MAX_BRIGHTNESS = 100 #sets the maximum brightness. All values will be clamped there. Physical maximum is 255
+MAX_BRIGHTNESS = 255 #sets the maximum brightness. All values will be clamped there. Physical maximum is 255
 
 def fft_callback_function(fft_data):
     """
@@ -98,7 +98,7 @@ def ledoutput():
         artnet_sender.send_brightness_buffer(int_frame)
         time_diff = datetime.datetime.now() - start_time
         time_diff = time_diff.total_seconds()
-        print("Sending frame ", counter, "/", len(frames))
+        print("LIGHTING ", counter, "/", len(frames))
         counter = counter+1
         if not LIVE_REPLAY:
             sleep_time = 1.0/(fft.FPS + SPEED_BOOST) - time_diff
@@ -134,7 +134,7 @@ def contains_silence(fft_frame):
     """
     timestamp = spectrum_analyzer.last_frame_timestamp
     fft_sum = math.fsum(fft_frame)
-    print("fft_sum: ", fft_sum)
+    print("level: {:03.0f}".format(fft_sum)," / ",PAUSE_SILENCE_THRESH,"\n")
     return fft_sum < PAUSE_SILENCE_THRESH
 
 def contains_silence_pause_detected(fft_frame):
@@ -147,12 +147,12 @@ def contains_silence_pause_detected(fft_frame):
     frame_contains_silence = contains_silence(fft_frame)
     if frame_contains_silence:
         pause_counter += 1
-        print("pause_counter: ", pause_counter)
+        print("WAITING... (", pause_counter,"/",PAUSE_LENGTH,")")
         if pause_counter > PAUSE_LENGTH:
             pause_counter = 0
             return frame_contains_silence, True
     else:
-        print("LISTENING!")
+        #print("LISTENING!")
         pause_counter = 0
     return frame_contains_silence, False
 
@@ -248,7 +248,7 @@ class Recording(State):
                      frames_to_remove -= 1
                  else:
                      break
-        print("buffer", len(prediction_buffer))
+        #print("buffer", len(prediction_buffer))
     def next(self, fft_frame):
         global prediction_counter, activation_counter
         _frame_contains_silence, pause_detected = contains_silence_pause_detected(fft_frame)
@@ -264,7 +264,7 @@ class Recording(State):
             prediction_counter = frames_to_remove = activation_counter = 0
             return InterspaceStateMachine.replaying
         else:
-            print("recording again")
+            print("LISTENING!!! (",len(prediction_buffer),")")
             return InterspaceStateMachine.recording
 
 class Replaying(State):
