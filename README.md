@@ -21,12 +21,17 @@ Also see: line 153 and line 102
 Ableton Live(sound program)/FFT analysis => 30 float values via OSC (NN input) => python/neural network => 13824 float values via OSC (NN output) => JAVA(visualizer on screen and light object)
 
 ## packages/files needed
-TensorFlow (pip tensorflow)
-Keras (pip keras)
-PythonOsc (pip python-osc)
+* TensorFlow (pip tensorflow)
+* Keras (pip keras)
+* PythonOsc (pip python-osc)
 www.birkschmithuesen.com/SAI/traingsdata.txt
 
 # installation
 
-  brew install portaudio
-  pip3 install -r requirements.txt
+  * brew install portaudio
+  * pip3 install -r requirements.txt
+  
+# installation for training
+  * python=3.6.8
+  * create Conda Environment with libraries defined in "specs-conda.txt": conda create --name $ENV_name --file specs-conda.txt
+  * update tensorflow with pip according to "cpecs-pip.txt": pip install tensorflow==1.14
