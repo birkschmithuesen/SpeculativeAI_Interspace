@@ -30,3 +30,8 @@ www.birkschmithuesen.com/SAI/traingsdata.txt
 
   brew install portaudio
   pip3 install -r requirements.txt
+  
+# installation for training
+  python=3.6.8
+  create Conda Environment with libraries defined in "specs-conda.txt": conda create --name $ENV_name --file specs-conda.txt
+  update tensorflow with pip according to "cpecs-pip.txt": pip install tensorflow==1.14
