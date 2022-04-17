@@ -18,11 +18,16 @@ from keras.models import load_model
 from keras import backend as kerasBackend
 import numpy as np
 
-#os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the computed
+# this seems to help to get the CUDNN with RTX cards to work
+import keras.backend as K
+cfg = K.tf.ConfigProto(gpu_options={'allow_growth': True})
+K.set_session(K.tf.Session(config=cfg))
 
-MODEL_LOAD_FILE_PATH = './model.h5'
-MODEL_SAVE_FILE_PATH = './model_new.h5'
-MODEL_TRAININGS_DATA_FILE_PATH = './trngsdata.txt'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '-1' #force Tensorflow to use the computed
+
+MODEL_LOAD_FILE_PATH = '..\\model.h5'               #Linux / OSX: ./model.h5
+MODEL_SAVE_FILE_PATH = '..\\model_new.h5'           #Linux / OSX: ./model_new.h5
+MODEL_TRAININGS_DATA_FILE_PATH = '..\\trngsdata.txt'#Linux / OSX: ./trngsdata.txt
 
 LOAD_MODEL = os.path.isfile(MODEL_LOAD_FILE_PATH)
 SAVE_MODEL = not LOAD_MODEL
