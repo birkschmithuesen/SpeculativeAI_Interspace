@@ -35,3 +35,16 @@ www.birkschmithuesen.com/SAI/traingsdata.txt
   * python=3.6.8
   * create Conda Environment with libraries defined in "specs-conda.txt": conda create --name $ENV_name --file specs-conda.txt
   * update tensorflow with pip according to "cpecs-pip.txt": pip install tensorflow==1.14
+
+---
+
+## 2026-09-24 note
+
+This README describes the *other* (30-bin, Ableton-driven) pipeline — it
+does not match what's actually on this branch. This branch is a different,
+self-contained system: microphone/audio-cable input via
+`conversation/fft.py`, direct ArtNet output, no Ableton/OSC. See
+`AGENTS.md` for the full picture, the two models' provenance (light object
+1 / object 2, used alongside the `SpeculativeAI_Dodeca` sound work), and a
+`tf_keras` vs. `keras` loading gotcha that affects both models on a modern
+Python stack.
