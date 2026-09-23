@@ -30,3 +30,16 @@ www.birkschmithuesen.com/SAI/traingsdata.txt
 
   brew install portaudio
   pip3 install -r requirements.txt
+
+---
+
+## 2026-09-24 update
+
+A debugging/retraining session on the Tracking-Laptop found that the
+original download links above are dead and no 30-input trained model
+survives anywhere (this repo, its Releases, or checked backups). A new one
+was trained from real training data found on a backup drive and published
+as a GitHub Release (`model-30bin-retrained-2026-09-24`). See `AGENTS.md`
+for that, the real (and outdated-tooltip) Ableton signal chain, four fixes
+needed to run `main.py` on a modern Python/TensorFlow stack, and two
+`ortlicht` bugs found along the way.
