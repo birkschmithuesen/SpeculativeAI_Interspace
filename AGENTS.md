@@ -111,19 +111,38 @@ it):
 
 ## `ortlicht` companion repo (separate GitHub repo `ortlicht`)
 
-Two bugs found and fixed there during this session, relevant if the light
-object still looks wrong even with a correct model:
+**Use branch `SAI-Performance`** (created 2026-09-24 from `master`, same
+commit `40fc8ac`) for this performance, not `master` — it has the fixes
+below already applied and built (`dist/ortlicht-neu.jar` is a build output,
+not committed; run `build_ortlicht.bat` after checkout). `master` stays the
+general/shared line.
+
+Three things fixed there during this session, relevant if the light object
+still looks wrong even with a correct model:
 
 - **LED calibration data was stale.** A working checkout's
   `ortlicht/data/ledPositions.txt` and `regressionNormals.txt` did not
   match the `object1` calibration in the `ortlicht` repo's `SAI_training`
   branch (`data/object1/ledPositions.txt` etc. — identical to `ortlicht`'s
-  `master`-branch top-level copy). If the object in use is object1
-  (confirmed with the artist for this session), copy those in.
+  `master`-branch top-level copy, and to `SAI-Performance`'s). If the
+  object in use is object1 (confirmed with the artist for this session),
+  make sure a working checkout's copy matches those, they're easy to
+  accidentally overwrite with a stale local calibration.
 - **The on-screen 3D preview was disabled.** `Ortlicht.java draw()` had the
-  `drawScreen()` call commented out in both the NN and mixer branches. This
-  does *not* affect the real ArtNet output (`artNetSender.sendToLeds()` is
-  called before the preview draw either way) — only the on-screen
-  visualization was dark. Re-enabled, with a `d` key toggle and the
-  previously-unthrottled `"get NN"` per-frame heartbeat log throttled to
-  once/second.
+  `drawScreen()` call commented out. This does *not* affect the real
+  ArtNet output (`artNetSender.sendToLeds()` is called before the preview
+  draw either way) — only the on-screen visualization was dark. Re-enabled,
+  with a `d` key toggle and the previously-unthrottled `"get NN"`
+  per-frame heartbeat log throttled to once/second.
+- **`/NN/play` used to take an exclusive shortcut around the mixer.**
+  `draw()` called `nnListener.getFrame()` directly and skipped
+  `mixer.mix()` entirely whenever NN data was flowing, even though `NNefx`
+  already exists as a proper mixer effect reading the same
+  `nnListener.getFrame()` data — so the mixer's other effects
+  (`MovingWallEffect`, `ManualSphere`, `VideoPlayer`, ...) froze/
+  disappeared as soon as SAI Python started sending. `draw()` now always
+  calls `mixer.mix()`; the NN layer blends in via `NNefx`'s own
+  `/mixer/opacity/neuralNetwork` and `/colors/NN/` parameters (set by
+  `nnplay.py`) instead of an exclusive on/off switch. Note: `/NN/play`
+  itself no longer gates visibility — only the throttled `"get NN"` log
+  line still reads it, purely as a diagnostic.
